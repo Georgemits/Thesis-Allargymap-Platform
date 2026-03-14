@@ -22,6 +22,7 @@ Usage (CLI):
     python open_meteo_fetcher.py --mode historical --start 2024-01-01 --end 2024-12-31
     python open_meteo_fetcher.py --city Athens --mode forecast
     python open_meteo_fetcher.py --lat 37.98 --lon 23.73 --name MyCity
+    python open_meteo_fetcher.py --mode forecast --push-to-mongo
 
 Output:
     data_collection/output/<name>_weather_<timestamp>.csv
@@ -411,6 +412,11 @@ Examples:
         "--list-cities", action="store_true",
         help="Print available Greek cities and exit",
     )
+    parser.add_argument(
+        "--push-to-mongo", action="store_true",
+        help="After fetching, import the combined data into MongoDB "
+             "(reads MONGO_URI from .env or defaults to localhost:27017/allergymap)",
+    )
     return parser.parse_args()
 
 
@@ -436,7 +442,7 @@ def main() -> None:
         if args.lat is None or args.lon is None or not args.name:
             print("Error: --lat, --lon, and --name are all required together.", file=sys.stderr)
             sys.exit(1)
-        run_for_location(name=args.name, lat=args.lat, lon=args.lon, **common)
+        combined_df = run_for_location(name=args.name, lat=args.lat, lon=args.lon, **common)
 
     elif args.city:
         city = args.city.strip()
@@ -447,11 +453,21 @@ def main() -> None:
             )
             sys.exit(1)
         coords = GREEK_LOCATIONS[city]
-        run_for_location(name=city, lat=coords["latitude"], lon=coords["longitude"], **common)
+        combined_df = run_for_location(name=city, lat=coords["latitude"], lon=coords["longitude"], **common)
 
     else:
         # Default: fetch all Greek cities
-        run_all_greek_cities(**common)
+        combined_df = run_all_greek_cities(**common)
+
+    if args.push_to_mongo:
+        from mongo_importer import import_dataframe, get_mongo_uri
+        print(f"\n{'='*60}")
+        print("Pushing data to MongoDB…")
+        try:
+            import_dataframe(combined_df, get_mongo_uri())
+        except Exception as exc:
+            print(f"  [mongo] Import failed: {exc}", file=sys.stderr)
+            sys.exit(1)
 
 
 if __name__ == "__main__":
