@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AllergyMap — Dashboard</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <!-- Chart.js for time series -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <nav class="navbar">
+    <span class="brand">AllergyMap</span>
+    <a href="index.html">Map</a>
+    <a href="report.html">Report Symptoms</a>
+    <a href="dashboard.html" class="active">Dashboard</a>
+  </nav>
+
+  <main class="container">
+    <h1>Environmental Dashboard</h1>
+
+    <div class="controls card">
+      <label>City:
+        <select id="citySelect">
+          <option value="Athens">Athens</option>
+          <option value="Thessaloniki">Thessaloniki</option>
+          <option value="Patras">Patras</option>
+          <option value="Heraklion">Heraklion</option>
+          <option value="Ioannina">Ioannina</option>
+          <option value="Larissa">Larissa</option>
+          <option value="Volos">Volos</option>
+          <option value="Rhodes">Rhodes</option>
+          <option value="Chania">Chania</option>
+          <option value="Alexandroupoli">Alexandroupoli</option>
+        </select>
+      </label>
+      <label>Days:
+        <select id="daysSelect">
+          <option value="3">3 days</option>
+          <option value="7" selected>7 days</option>
+          <option value="14">14 days</option>
+          <option value="30">30 days</option>
+        </select>
+      </label>
+      <button id="loadBtn" class="btn-primary">Load</button>
+    </div>
+
+    <div class="charts-grid">
+      <div class="card chart-card">
+        <h2>Pollen Levels (grains/m³)</h2>
+        <canvas id="pollenChart"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h2>Air Quality Index</h2>
+        <canvas id="aqiChart"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h2>Temperature &amp; Humidity</h2>
+        <canvas id="weatherChart"></canvas>
+      </div>
+      <div class="card chart-card">
+        <h2>Reports Severity (last 30 days)</h2>
+        <canvas id="severityChart"></canvas>
+      </div>
+    </div>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/dashboard.js"></script>
+</body>
+</html>

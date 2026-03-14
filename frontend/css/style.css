@@ -1,0 +1,120 @@
+/* ─── Reset & Base ───────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --primary:   #2e7d32;
+  --accent:    #66bb6a;
+  --danger:    #e53935;
+  --warn:      #fb8c00;
+  --text:      #212121;
+  --muted:     #757575;
+  --bg:        #f5f5f5;
+  --card-bg:   #ffffff;
+  --radius:    8px;
+  --shadow:    0 2px 8px rgba(0,0,0,.12);
+}
+
+body { font-family: "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+
+/* ─── Navbar ─────────────────────────────────────────────────────────────── */
+.navbar {
+  background: var(--primary);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: .75rem 1.5rem;
+  position: sticky; top: 0; z-index: 1000;
+}
+.navbar .brand { font-weight: 700; font-size: 1.2rem; margin-right: auto; }
+.navbar a { color: rgba(255,255,255,.85); text-decoration: none; font-size: .95rem; }
+.navbar a:hover, .navbar a.active { color: #fff; border-bottom: 2px solid var(--accent); }
+
+/* ─── Map Page ───────────────────────────────────────────────────────────── */
+#map { height: calc(100vh - 48px); width: 100%; }
+
+.legend {
+  position: fixed; bottom: 2rem; right: 1rem;
+  background: var(--card-bg);
+  padding: .75rem 1rem;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: .875rem;
+  z-index: 999;
+}
+.legend > div { margin-top: .3rem; display: flex; align-items: center; gap: .5rem; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; }
+.dot.low  { background: #43a047; }
+.dot.mid  { background: var(--warn); }
+.dot.high { background: var(--danger); }
+
+/* ─── Shared Card ────────────────────────────────────────────────────────── */
+.card {
+  background: var(--card-bg);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 1.25rem 1.5rem;
+}
+
+/* ─── Container ──────────────────────────────────────────────────────────── */
+.container { max-width: 960px; margin: 2rem auto; padding: 0 1rem; }
+.container h1 { margin-bottom: .5rem; color: var(--primary); }
+.hint { color: var(--muted); margin-bottom: 1.5rem; }
+
+/* ─── Report Form ────────────────────────────────────────────────────────── */
+.info-box {
+  background: #e8f5e9; border-left: 4px solid var(--accent);
+  padding: .6rem 1rem; border-radius: var(--radius); margin-bottom: 1rem;
+  font-size: .875rem;
+}
+.form-group { margin-bottom: 1rem; display: flex; flex-direction: column; gap: .3rem; }
+.form-group label { font-weight: 600; font-size: .9rem; }
+.form-group input, .form-group textarea {
+  border: 1px solid #ccc; border-radius: var(--radius);
+  padding: .5rem .75rem; font-size: 1rem;
+  transition: border-color .2s;
+}
+.form-group input:focus, .form-group textarea:focus {
+  outline: none; border-color: var(--primary);
+}
+
+fieldset { border: 1px solid #e0e0e0; border-radius: var(--radius); padding: 1rem; margin-bottom: 1rem; }
+legend { font-weight: 600; color: var(--primary); padding: 0 .5rem; }
+
+.symptom-grid { display: flex; flex-direction: column; gap: .75rem; margin-top: .5rem; }
+.symptom-row {
+  display: grid;
+  grid-template-columns: 140px 1fr 2.5rem;
+  align-items: center; gap: .75rem;
+}
+.symptom-row label { font-size: .9rem; }
+.symptom-row input[type=range] { accent-color: var(--primary); cursor: pointer; }
+.symptom-row output { font-weight: 700; color: var(--primary); text-align: right; }
+
+.btn-primary {
+  background: var(--primary); color: #fff;
+  border: none; border-radius: var(--radius);
+  padding: .6rem 1.4rem; font-size: 1rem; cursor: pointer;
+  transition: background .2s;
+}
+.btn-primary:hover { background: #1b5e20; }
+
+.form-msg { margin-top: .75rem; padding: .6rem 1rem; border-radius: var(--radius); font-size: .9rem; }
+.form-msg.success { background: #e8f5e9; color: #2e7d32; }
+.form-msg.error   { background: #ffebee; color: var(--danger); }
+.hidden { display: none; }
+
+/* ─── Dashboard ──────────────────────────────────────────────────────────── */
+.controls { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
+.controls label { font-size: .9rem; font-weight: 600; }
+.controls select {
+  margin-left: .3rem; border: 1px solid #ccc; border-radius: var(--radius);
+  padding: .35rem .6rem; font-size: .9rem;
+}
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 1.25rem;
+}
+.chart-card h2 { font-size: 1rem; color: var(--primary); margin-bottom: .75rem; }
+.chart-card canvas { max-height: 260px; }

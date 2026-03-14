@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AllergyMap — Live Map</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <span class="brand">AllergyMap</span>
+    <a href="index.html" class="active">Map</a>
+    <a href="report.html">Report Symptoms</a>
+    <a href="dashboard.html">Dashboard</a>
+  </nav>
+
+  <div id="map"></div>
+
+  <div class="legend card">
+    <strong>Symptom Severity</strong>
+    <div><span class="dot low"></span> Low (0–4)</div>
+    <div><span class="dot mid"></span> Medium (5–8)</div>
+    <div><span class="dot high"></span> High (9–12)</div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/map.js"></script>
+</body>
+</html>

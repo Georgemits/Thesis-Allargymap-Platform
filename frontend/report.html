@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AllergyMap — Report Symptoms</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <span class="brand">AllergyMap</span>
+    <a href="index.html">Map</a>
+    <a href="report.html" class="active">Report Symptoms</a>
+    <a href="dashboard.html">Dashboard</a>
+  </nav>
+
+  <main class="container">
+    <h1>Report Your Symptoms</h1>
+    <p class="hint">Rate each symptom on a 0–12 scale (0 = none, 12 = severe).</p>
+
+    <form id="reportForm" class="card">
+      <div id="locationStatus" class="info-box">Detecting your location…</div>
+      <input type="hidden" id="lat" name="lat" />
+      <input type="hidden" id="lon" name="lon" />
+
+      <div class="form-group">
+        <label>City (auto-detected or type)</label>
+        <input type="text" id="city" name="city" placeholder="e.g. Athens" />
+      </div>
+
+      <fieldset>
+        <legend>Symptoms (VAS 0–12)</legend>
+        <div class="symptom-grid">
+          <div class="symptom-row" data-symptom="sneezing">
+            <label>Sneezing</label>
+            <input type="range" min="0" max="12" value="0" />
+            <output>0</output>
+          </div>
+          <div class="symptom-row" data-symptom="runny_nose">
+            <label>Runny Nose</label>
+            <input type="range" min="0" max="12" value="0" />
+            <output>0</output>
+          </div>
+          <div class="symptom-row" data-symptom="itchy_eyes">
+            <label>Itchy Eyes</label>
+            <input type="range" min="0" max="12" value="0" />
+            <output>0</output>
+          </div>
+          <div class="symptom-row" data-symptom="cough">
+            <label>Cough</label>
+            <input type="range" min="0" max="12" value="0" />
+            <output>0</output>
+          </div>
+          <div class="symptom-row" data-symptom="skin_rash">
+            <label>Skin Rash</label>
+            <input type="range" min="0" max="12" value="0" />
+            <output>0</output>
+          </div>
+          <div class="symptom-row" data-symptom="wheezing">
+            <label>Wheezing</label>
+            <input type="range" min="0" max="12" value="0" />
+            <output>0</output>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="form-group">
+        <label>Notes (optional)</label>
+        <textarea id="notes" name="notes" rows="3" maxlength="500"
+                  placeholder="Any additional context…"></textarea>
+      </div>
+
+      <button type="submit" class="btn-primary">Submit Report</button>
+      <div id="formMsg" class="form-msg hidden"></div>
+    </form>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/report.js"></script>
+</body>
+</html>
