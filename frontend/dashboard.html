@@ -7,6 +7,8 @@
   <link rel="stylesheet" href="css/style.css" />
   <!-- Chart.js for time series -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <!-- Date adapter required for Chart.js time-scale (used by AI forecast charts) -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3.0.0/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
 </head>
 <body>
   <nav class="navbar">
@@ -63,6 +65,25 @@
         <canvas id="severityChart"></canvas>
       </div>
     </div>
+
+    <!-- ── AI Forecast Section ───────────────────────────────────────── -->
+    <section class="forecast-section">
+      <div class="card">
+        <div class="forecast-header">
+          <div>
+            <h2>AI-Powered 7-Day Pollen Forecast</h2>
+            <p class="hint">
+              Predicted grass &amp; olive pollen levels — RandomForest model trained on
+              historical hourly data with 24/48/72-hour lag features.
+            </p>
+          </div>
+          <button id="runPredictionBtn" class="btn-primary">Run Prediction</button>
+        </div>
+        <div id="forecastStatus" class="info-box hidden"></div>
+        <canvas id="forecastPollenChart"></canvas>
+        <canvas id="forecastWeatherChart" style="margin-top:1.5rem;"></canvas>
+      </div>
+    </section>
   </main>
 
   <script src="js/api.js"></script>

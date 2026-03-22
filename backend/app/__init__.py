@@ -18,9 +18,11 @@ def create_app(config_name: str = None) -> Flask:
     from .routes.health import bp as health_bp
     from .routes.reports import bp as reports_bp
     from .routes.env_data import bp as env_bp
+    from .routes.predictions import bp as predictions_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(reports_bp, url_prefix="/api/reports")
     app.register_blueprint(env_bp, url_prefix="/api/env")
+    app.register_blueprint(predictions_bp, url_prefix="/api/predictions")
 
     return app

@@ -37,5 +37,19 @@ const API = (() => {
     /** Fetch recent reports for a city. */
     getCityReports: (city, limit = 200) =>
       request(`/api/reports?city=${encodeURIComponent(city)}&limit=${limit}`),
+
+    /** Fetch the latest stored 7-day AI forecast for a city (all variables). */
+    getPredictions: (city) =>
+      request(`/api/predictions/${encodeURIComponent(city)}`),
+
+    /**
+     * Trigger ML training + forecast for a city.
+     * source: "csv" | "mongo"  (default "csv")
+     */
+    runPrediction: (city, source = "csv") =>
+      request("/api/predictions/run", {
+        method: "POST",
+        body: JSON.stringify({ city, source }),
+      }),
   };
 })();

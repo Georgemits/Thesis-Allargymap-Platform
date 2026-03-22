@@ -1,0 +1,10 @@
+FROM python:3.11-slim
+
+WORKDIR /app/data_collection
+
+COPY data_collection/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY data_collection/ .
+
+CMD ["python", "open_meteo_fetcher.py", "--mode", "past", "--days", "30", "--push-to-mongo"]

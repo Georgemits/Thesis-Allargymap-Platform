@@ -3,10 +3,15 @@
  * Loads on dashboard.html.
  */
 
-let pollenChart, aqiChart, weatherChart, severityChart;
+let pollenChart, aqiChart, weatherChart, severityChart, forecastPollenChart, forecastWeatherChart;
 
 function destroyAll() {
   [pollenChart, aqiChart, weatherChart, severityChart].forEach((c) => c?.destroy());
+}
+
+function destroyForecast() {
+  forecastPollenChart?.destroy();
+  forecastWeatherChart?.destroy();
 }
 
 function labels(docs) {
@@ -147,3 +152,188 @@ async function loadDashboard() {
 
 document.getElementById("loadBtn").addEventListener("click", loadDashboard);
 loadDashboard();
+
+// ---------------------------------------------------------------------------
+// AI Forecast section
+// ---------------------------------------------------------------------------
+
+/**
+ * Build Chart.js labels from ISO timestamp strings, showing date + hour.
+ * To keep the x-axis readable, show a label only every 24th point (daily tick).
+ */
+function forecastLabels(forecasts) {
+  return forecasts.map((f, i) => {
+    const d = new Date(f.forecast_timestamp);
+    // Show "Mar 15" label once per day; blank otherwise
+    return d.getHours() === 0
+      ? d.toLocaleDateString("en-GB", { month: "short", day: "numeric" })
+      : "";
+  });
+}
+
+function buildForecastPollenChart(variables) {
+  destroyForecast();
+  const ctx = document.getElementById("forecastPollenChart");
+
+  const datasets = [];
+  const palettePollen = { grass_pollen: "#43a047", olive_pollen: "#8d6e63" };
+
+  for (const [varName, color] of Object.entries(palettePollen)) {
+    const series = variables[varName];
+    if (!series || !series.length) continue;
+    datasets.push({
+      label: varName === "grass_pollen" ? "Grass Pollen" : "Olive Pollen",
+      data: series.map((f) => ({ x: f.forecast_timestamp, y: f.predicted_value })),
+      borderColor: color,
+      backgroundColor: color + "33",
+      tension: 0.3,
+      fill: false,
+      pointRadius: 0,
+    });
+  }
+
+  if (!datasets.length) return;
+
+  forecastPollenChart = new Chart(ctx, {
+    type: "line",
+    data: { datasets },
+    options: {
+      responsive: true,
+      parsing: false,
+      plugins: {
+        legend: { position: "bottom" },
+        title: { display: true, text: "7-Day Pollen Forecast (grains/m³)" },
+        tooltip: {
+          callbacks: {
+            title: (items) => new Date(items[0].raw.x).toLocaleString("en-GB"),
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: "time",
+          time: { unit: "day", displayFormats: { day: "MMM d" } },
+          title: { display: true, text: "Date" },
+        },
+        y: { min: 0, title: { display: true, text: "grains/m³" } },
+      },
+    },
+  });
+
+  // Weather forecast chart (temperature + humidity)
+  buildForecastWeatherChart(variables);
+}
+
+function buildForecastWeatherChart(variables) {
+  const ctx = document.getElementById("forecastWeatherChart");
+  const datasets = [];
+
+  const tempSeries = variables["temperature_2m"];
+  const humSeries  = variables["relative_humidity_2m"];
+
+  if (tempSeries?.length) {
+    datasets.push({
+      label: "Temperature (°C)",
+      data: tempSeries.map((f) => ({ x: f.forecast_timestamp, y: f.predicted_value })),
+      borderColor: "#ef5350", backgroundColor: "#ef535033",
+      yAxisID: "yTemp", tension: 0.3, fill: false, pointRadius: 0,
+    });
+  }
+  if (humSeries?.length) {
+    datasets.push({
+      label: "Humidity (%)",
+      data: humSeries.map((f) => ({ x: f.forecast_timestamp, y: f.predicted_value })),
+      borderColor: "#29b6f6", backgroundColor: "#29b6f633",
+      yAxisID: "yHum", tension: 0.3, fill: false, pointRadius: 0,
+    });
+  }
+
+  if (!datasets.length) return;
+
+  forecastWeatherChart = new Chart(ctx, {
+    type: "line",
+    data: { datasets },
+    options: {
+      responsive: true,
+      parsing: false,
+      plugins: {
+        legend: { position: "bottom" },
+        title: { display: true, text: "7-Day Temperature & Humidity Forecast" },
+        tooltip: {
+          callbacks: {
+            title: (items) => new Date(items[0].raw.x).toLocaleString("en-GB"),
+          },
+        },
+      },
+      scales: {
+        x: {
+          type: "time",
+          time: { unit: "day", displayFormats: { day: "MMM d" } },
+          title: { display: true, text: "Date" },
+        },
+        yTemp: {
+          type: "linear", position: "left",
+          title: { display: true, text: "°C" },
+        },
+        yHum: {
+          type: "linear", position: "right",
+          grid: { drawOnChartArea: false },
+          title: { display: true, text: "%" },
+        },
+      },
+    },
+  });
+}
+
+function setForecastStatus(msg, isError = false) {
+  const el = document.getElementById("forecastStatus");
+  el.textContent = msg;
+  el.className = "info-box" + (isError ? " error" : "");
+  el.classList.remove("hidden");
+}
+
+async function loadForecast(city) {
+  setForecastStatus("Loading forecast…");
+  try {
+    const data = await API.getPredictions(city);
+    if (!data.variables || !Object.keys(data.variables).length) {
+      setForecastStatus("No predictions stored yet. Click 'Run Prediction' to generate.");
+      return;
+    }
+    document.getElementById("forecastStatus").classList.add("hidden");
+    buildForecastPollenChart(data.variables);
+  } catch (err) {
+    // 404 = not yet generated; any other error is a real failure
+    if (err.message.includes("404") || err.message.includes("No predictions")) {
+      setForecastStatus("No predictions stored yet. Click 'Run Prediction' to generate.");
+    } else {
+      setForecastStatus("Could not load forecast: " + err.message, true);
+    }
+  }
+}
+
+document.getElementById("runPredictionBtn").addEventListener("click", async () => {
+  const city = document.getElementById("citySelect").value;
+  const btn = document.getElementById("runPredictionBtn");
+  btn.disabled = true;
+  btn.textContent = "Running…";
+  setForecastStatus(`Training model for ${city}… this may take a few seconds.`);
+  try {
+    await API.runPrediction(city, "csv");
+    setForecastStatus(`Model trained. Loading forecast for ${city}…`);
+    await loadForecast(city);
+  } catch (err) {
+    setForecastStatus("Prediction failed: " + err.message, true);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Run Prediction";
+  }
+});
+
+// Load any existing forecast when the city selector changes
+document.getElementById("citySelect").addEventListener("change", () => {
+  loadForecast(document.getElementById("citySelect").value);
+});
+
+// Auto-load on page open
+loadForecast(document.getElementById("citySelect").value);

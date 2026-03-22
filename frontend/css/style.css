@@ -104,6 +104,9 @@ legend { font-weight: 600; color: var(--primary); padding: 0 .5rem; }
 .form-msg.error   { background: #ffebee; color: var(--danger); }
 .hidden { display: none; }
 
+/* ─── Info-box error variant ─────────────────────────────────────────────── */
+.info-box.error { background: #ffebee; border-left-color: var(--danger); color: var(--danger); }
+
 /* ─── Dashboard ──────────────────────────────────────────────────────────── */
 .controls { display: flex; gap: 1rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
 .controls label { font-size: .9rem; font-weight: 600; }
@@ -118,3 +121,14 @@ legend { font-weight: 600; color: var(--primary); padding: 0 .5rem; }
 }
 .chart-card h2 { font-size: 1rem; color: var(--primary); margin-bottom: .75rem; }
 .chart-card canvas { max-height: 260px; }
+
+/* ─── AI Forecast Section ────────────────────────────────────────────────── */
+.forecast-section { margin-top: 2rem; }
+.forecast-section h2 { font-size: 1.1rem; color: var(--primary); margin-bottom: .25rem; }
+.forecast-section .hint { font-size: .85rem; color: var(--muted); margin-bottom: 1rem; }
+.forecast-header {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;
+}
+.forecast-section canvas { max-height: 300px; }
+.btn-primary:disabled { background: var(--muted); cursor: not-allowed; }

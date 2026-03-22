@@ -4,3 +4,6 @@ flask-cors==5.0.0
 pymongo==4.10.1
 python-dotenv==1.0.1
 gunicorn==23.0.0
+scikit-learn>=1.4.0
+numpy>=1.26.0
+pandas>=2.1.0

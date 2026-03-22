@@ -35,6 +35,18 @@ services:
     ports:
       - "5000:5000"
 
+  seeder:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.seeder
+    container_name: allergymap_seeder
+    restart: "no"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://mongo:27017/allergymap
+
   frontend:
     image: nginx:alpine
     container_name: allergymap_frontend
