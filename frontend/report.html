@@ -10,9 +10,14 @@
 <body>
   <nav class="navbar">
     <span class="brand">AllergyMap</span>
-    <a href="index.html">Map</a>
-    <a href="report.html" class="active">Report Symptoms</a>
-    <a href="dashboard.html">Dashboard</a>
+    <button class="navbar-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="navbar-links">
+      <a href="index.html">Map</a>
+      <a href="report.html" class="active">Report Symptoms</a>
+      <a href="dashboard.html">Dashboard</a>
+    </div>
   </nav>
 
   <main class="container">
@@ -77,6 +82,7 @@
   </main>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/navbar.js"></script>
   <script src="js/api.js"></script>
   <script src="js/report.js"></script>
 </body>

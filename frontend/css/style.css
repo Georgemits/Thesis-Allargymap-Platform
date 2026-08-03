@@ -60,7 +60,10 @@ body {
 
 a { color: var(--accent); }
 
-/* ─── Navbar ─────────────────────────────────────────────────────────────── */
+/* ─── Navbar ─────────────────────────────────────────────────────────────────
+   Shared markup block (identical on index.html/report.html/dashboard.html)
+   + this one style block + js/navbar.js for the mobile toggle behavior.
+   ───────────────────────────────────────────────────────────────────────── */
 .navbar {
   background: var(--bg-elevated);
   border-bottom: 1px solid var(--border);
@@ -72,12 +75,47 @@ a { color: var(--accent); }
   position: sticky; top: 0; z-index: 1000;
 }
 .navbar .brand { font-weight: 700; font-size: var(--font-lg); letter-spacing: .01em; margin-right: auto; }
+
+.navbar-links { display: flex; align-items: center; gap: var(--space-3); }
 .navbar a {
   color: var(--text-secondary); text-decoration: none; font-size: var(--font-sm);
-  padding: .35rem .1rem; border-bottom: 2px solid transparent; transition: color .15s, border-color .15s;
+  padding: .45rem .7rem; border-radius: 999px;
+  border-bottom: 2px solid transparent;
+  transition: color .15s, background-color .15s, border-color .15s;
 }
-.navbar a:hover, .navbar a.active { color: var(--text-primary); border-bottom-color: var(--accent); }
+.navbar a:hover { color: var(--text-primary); }
+.navbar a.active {
+  color: var(--text-primary);
+  background: rgba(45, 212, 191, .12);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
 .navbar a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Mobile hamburger toggle -- hidden on desktop, shown under the breakpoint below */
+.navbar-toggle {
+  display: none;
+  flex-direction: column; justify-content: space-between;
+  width: 22px; height: 16px; padding: 0;
+  background: none; border: none; cursor: pointer;
+}
+.navbar-toggle span { display: block; height: 2px; background: var(--text-primary); border-radius: 1px; }
+.navbar-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+
+@media (max-width: 720px) {
+  .navbar-toggle { display: flex; }
+  .navbar-links {
+    display: none;
+    position: absolute; top: 100%; left: 0; right: 0;
+    flex-direction: column; align-items: stretch;
+    background: var(--bg-elevated); border-bottom: 1px solid var(--border);
+    padding: var(--space-2) var(--space-4) var(--space-3);
+    gap: var(--space-1);
+    box-shadow: var(--shadow);
+  }
+  .navbar-links.open { display: flex; }
+  .navbar a { padding: .6rem .7rem; }
+}
 
 /* ─── Map Page ───────────────────────────────────────────────────────────── */
 #map { height: calc(100vh - 57px); width: 100%; }
