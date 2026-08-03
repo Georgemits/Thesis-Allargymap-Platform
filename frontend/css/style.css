@@ -124,18 +124,26 @@ a { color: var(--accent); }
   position: fixed; bottom: var(--space-4); right: var(--space-3);
   background: var(--bg-surface);
   border: 1px solid var(--border);
-  padding: var(--space-2) var(--space-3);
+  padding: var(--space-3);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   font-size: var(--font-sm);
   color: var(--text-primary);
   z-index: 999;
+  width: 220px;
 }
-.legend > div { margin-top: .4rem; display: flex; align-items: center; gap: .6rem; }
-.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; box-shadow: 0 0 0 2px rgba(255,255,255,.15); }
-.dot.low  { background: var(--success); }
-.dot.mid  { background: var(--warn); }
-.dot.high { background: var(--danger); }
+.legend-select-label { display: flex; flex-direction: column; gap: .3rem; font-weight: 600; font-size: var(--font-sm); }
+.legend-select-label select {
+  background: var(--bg-elevated); color: var(--text-primary);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  padding: .4rem .6rem; font-size: var(--font-sm);
+}
+.legend-gradient {
+  height: 10px; margin-top: var(--space-2); border-radius: 999px;
+  background: linear-gradient(to right, #2563eb, #0ea5e9, #22d3ee, #facc15, #ef4444);
+}
+.legend-scale { display: flex; justify-content: space-between; margin-top: .3rem; font-size: var(--font-xs); color: var(--text-secondary); }
+.legend-note { margin-top: var(--space-2); font-size: var(--font-xs); color: var(--text-secondary); line-height: 1.4; }
 
 /* ─── Shared Card ────────────────────────────────────────────────────────── */
 .card {

@@ -16,7 +16,8 @@ files (nginx in Docker, or `python -m http.server` locally).
 | File            | Purpose                                                    |
 |------------------|--------------------------------------------------------------|
 | `api.js`          | Thin `fetch` wrapper around the backend API (single source of truth for all endpoint URLs) |
-| `map.js`           | Leaflet map + allergen heatmap layer                          |
+| `map.js`           | Leaflet allergen-concentration heatmap (Leaflet.heat)          |
+| `navbar.js`         | Shared mobile nav toggle (identical include on all 3 pages)    |
 | `report.js`         | Form sliders, geolocation, submission                          |
 | `dashboard.js`      | Chart.js charts, date-range picker wiring, AI forecast section |
 
@@ -48,6 +49,24 @@ the chart theme can never drift from the CSS theme.
 **Leaflet map tiles** are left in their natural OpenStreetMap colors
 (real-world map imagery needs color fidelity); only the surrounding chrome
 (navbar, legend card) follows the clinical theme.
+
+## Allergen heatmap (`index.html`)
+
+`map.js` renders a real heatmap (the [Leaflet.heat](https://github.com/Leaflet/Leaflet.heat)
+plugin), keyed by allergen concentration -- **not** the earlier per-report
+severity `circleMarker`s (that function was misleadingly named
+`renderHeatmap`; it's gone now, along with the now-unused
+`api.js:getHeatmap()`/`GET /api/reports/heatmap` frontend call). Data comes
+from `GET /api/env/latest` (one snapshot per city). The legend panel's
+`<select>` toggles which allergen the heat layer is keyed by: olive, grass,
+or ragweed pollen (grains/m3), or Saharan dust (ug/m3, see the CAMS
+provenance note in `data_collection/README.md`); the gradient bar and max
+value/unit update to match.
+
+The ten predefined Greek cities (`data_collection/open_meteo_fetcher.py:GREEK_LOCATIONS`)
+are the only real data points -- Leaflet.heat's blur turns them into a
+smooth-looking field, which reads well but isn't a true continuous
+measurement; the legend says so ("blurred into a heatmap for display").
 
 ## Navbar
 

@@ -22,14 +22,25 @@
 
   <div id="map"></div>
 
-  <div class="legend card">
-    <strong>Symptom Severity</strong>
-    <div><span class="dot low"></span> Low (0–4)</div>
-    <div><span class="dot mid"></span> Medium (5–8)</div>
-    <div><span class="dot high"></span> High (9–12)</div>
+  <div class="legend card" id="allergenLegend">
+    <label class="legend-select-label">Allergen:
+      <select id="allergenSelect">
+        <option value="olive" selected>Olive pollen</option>
+        <option value="grass">Grass pollen</option>
+        <option value="ragweed">Ragweed pollen</option>
+        <option value="dust">Saharan dust</option>
+      </select>
+    </label>
+    <div class="legend-gradient"></div>
+    <div class="legend-scale">
+      <span>0</span>
+      <span id="legendMax">–</span>
+    </div>
+    <p class="legend-note">City-level readings (10 Greek cities), blurred into a heatmap for display.</p>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
   <script src="js/navbar.js"></script>
   <script src="js/api.js"></script>
   <script src="js/map.js"></script>

@@ -41,7 +41,8 @@ Thesis-Allargymap-Platform/
 │   ├── README.md               ← Frontend-specific notes (design system, contrast notes)
 │   └── js/
 │       ├── api.js             ← Handles all communication with the backend
-│       ├── map.js             ← Controls the Leaflet map
+│       ├── map.js             ← Leaflet allergen-concentration heatmap (olive/grass/ragweed/dust)
+│       ├── navbar.js           ← Shared mobile nav toggle
 │       ├── report.js          ← Handles form submission + GPS location
 │       └── dashboard.js       ← Draws the charts
 │
@@ -236,7 +237,7 @@ Once the backend is running, you can test these in your browser or with a tool l
 | GET    | `/health`                        | Check if the server is running                |
 | POST   | `/api/reports/`                  | Submit a symptom report                       |
 | GET    | `/api/reports/`                  | List all reports (add `?city=Athens&limit=50`)|
-| GET    | `/api/reports/heatmap`           | Get GeoJSON data for the map heatmap          |
+| GET    | `/api/reports/heatmap`           | GeoJSON of report locations/severity (not currently used by the frontend map -- see below) |
 | GET    | `/api/env/latest`                | Latest environmental data for each city       |
 | GET    | `/api/env/city/Athens`           | Time series for Athens (`?days=7`, or `?start_date=&end_date=YYYY-MM-DD`) |
 | GET    | `/api/env/capabilities`          | Provider date-range limits (for UI date pickers) |

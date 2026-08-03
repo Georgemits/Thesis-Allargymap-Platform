@@ -22,10 +22,6 @@ const API = (() => {
     submitReport: (payload) =>
       request("/api/reports/", { method: "POST", body: JSON.stringify(payload) }),
 
-    /** Fetch reports as GeoJSON heatmap. */
-    getHeatmap: (days = 30) =>
-      request(`/api/reports/heatmap?days=${days}`),
-
     /** Fetch latest env snapshot per city. */
     getLatestEnv: () =>
       request("/api/env/latest"),
