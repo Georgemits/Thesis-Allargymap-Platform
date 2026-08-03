@@ -31,12 +31,15 @@
         <option value="dust">Saharan dust</option>
       </select>
     </label>
-    <div class="legend-gradient"></div>
-    <div class="legend-scale">
-      <span>0</span>
-      <span id="legendMax">–</span>
+    <div id="legendGradientWrap">
+      <div class="legend-gradient"></div>
+      <div class="legend-scale">
+        <span>0</span>
+        <span id="legendMax">–</span>
+      </div>
     </div>
-    <p class="legend-note">City-level readings (10 Greek cities), blurred into a heatmap for display.</p>
+    <p id="legendStatus" class="legend-note hidden"></p>
+    <p class="legend-note">City-level readings (10 Greek cities), most recent available value per city, blurred into a heatmap for display.</p>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

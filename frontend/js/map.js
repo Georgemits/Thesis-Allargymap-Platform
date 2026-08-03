@@ -3,9 +3,16 @@
  * Loads on index.html.
  *
  * Replaces the earlier per-report severity circleMarkers with a real
- * heatmap (Leaflet.heat) keyed by pollen/dust concentration, built from the
- * latest env_snapshots document per city (GET /api/env/latest). A layer
+ * heatmap (Leaflet.heat) keyed by pollen/dust concentration. A layer
  * toggle switches which allergen the heatmap is keyed by.
+ *
+ * Data source: GET /api/env/city/<city>?days=7 per city, not
+ * GET /api/env/latest. The single "latest" row per city is often the very
+ * edge of the fetched forecast window, where Open-Meteo's pollen/dust
+ * models have no data yet (pollen forecasts are only reliable a few days
+ * out) -- so "latest" is frequently null for every allergen at once. Instead
+ * each city's last 7 days are fetched once and, per allergen, the most
+ * recent *non-null* reading is used.
  *
  * Data is only as granular as the ten predefined Greek cities in
  * data_collection/open_meteo_fetcher.py -- Leaflet.heat's blur turns those
@@ -31,18 +38,28 @@ const ALLERGENS = {
   dust:    { label: "Saharan dust",   unit: "μg/m³",     get: (d) => d.air_quality?.dust },
 };
 
+const HISTORY_DAYS = 7;
 const HEAT_GRADIENT = { 0.4: "#2563eb", 0.6: "#0ea5e9", 0.75: "#22d3ee", 0.9: "#facc15", 1.0: "#ef4444" };
 
 let heatLayer = null;
-let envDocs = [];
+// { cityName: { coords: [lon, lat], docs: [envSnapshot, ...] (ascending by timestamp) } }
+let cityHistories = {};
 
-/** [lat, lon, intensity] triples for one allergen, skipping cities with no reading. */
+/** Walk a city's history backwards and return the most recent non-null value for `get`. */
+function mostRecentValue(docs, get) {
+  for (let i = docs.length - 1; i >= 0; i--) {
+    const value = get(docs[i]);
+    if (value != null) return value;
+  }
+  return null;
+}
+
+/** [lat, lon, intensity] triples for one allergen, skipping cities with no recent reading. */
 function buildHeatPoints(allergenKey) {
   const { get } = ALLERGENS[allergenKey];
-  return envDocs
-    .map((doc) => {
-      const value = get(doc);
-      const coords = doc.location?.coordinates; // GeoJSON [lon, lat]
+  return Object.values(cityHistories)
+    .map(({ coords, docs }) => {
+      const value = mostRecentValue(docs, get);
       if (value == null || !coords) return null;
       const [lon, lat] = coords;
       return [lat, lon, value];
@@ -50,39 +67,87 @@ function buildHeatPoints(allergenKey) {
     .filter(Boolean);
 }
 
-function updateLegend(allergenKey, max) {
-  const { unit } = ALLERGENS[allergenKey];
+function updateLegend(allergenKey, points, max) {
+  const { unit, label } = ALLERGENS[allergenKey];
+  const statusEl = document.getElementById("legendStatus");
+  const gradientEl = document.getElementById("legendGradientWrap");
+
+  if (!points.length) {
+    statusEl.textContent = `No recent ${label.toLowerCase()} readings for any city (last ${HISTORY_DAYS} days).`;
+    statusEl.classList.remove("hidden");
+    gradientEl.classList.add("hidden");
+    return;
+  }
+
+  if (max === 0) {
+    // Real, confirmed readings -- not missing data -- every city just
+    // reported zero (e.g. olive pollen well outside its April-June season).
+    // Distinct from the "no data at all" case above: don't imply a heat
+    // layer is showing something when every value is truly zero.
+    statusEl.textContent = `All cities report 0 ${unit} ${label.toLowerCase()} right now -- nothing to show on the heatmap.`;
+    statusEl.classList.remove("hidden");
+    gradientEl.classList.add("hidden");
+    return;
+  }
+
+  statusEl.classList.add("hidden");
+  gradientEl.classList.remove("hidden");
   document.getElementById("legendMax").textContent = `${max.toFixed(1)} ${unit}`;
 }
 
 function renderAllergenLayer(allergenKey) {
   const points = buildHeatPoints(allergenKey);
-  const max = Math.max(1, ...points.map((p) => p[2]));
+  const max = points.length ? Math.max(...points.map((p) => p[2])) : 0;
 
   if (heatLayer) map.removeLayer(heatLayer);
-  heatLayer = L.heatLayer(points, {
-    radius: 65,
-    blur: 45,
-    maxZoom: 8,
-    max,
-    minOpacity: 0.35,
-    gradient: HEAT_GRADIENT,
-  }).addTo(map);
+  heatLayer = null;
 
-  updateLegend(allergenKey, max);
+  // Skip rendering a layer entirely when there's nothing (or only zeros) to
+  // show -- with minOpacity a heat layer would otherwise paint a visible
+  // blob even for confirmed-zero data, which contradicts a "0.0" legend.
+  if (max > 0) {
+    heatLayer = L.heatLayer(points, {
+      radius: 50,
+      blur: 30,
+      maxZoom: 8,
+      max,
+      gradient: HEAT_GRADIENT,
+    }).addTo(map);
+  }
+
+  updateLegend(allergenKey, points, max);
 }
 
 document.getElementById("allergenSelect").addEventListener("change", (e) => {
   renderAllergenLayer(e.target.value);
 });
 
-async function init() {
+/** Fetch each city's recent history once; the allergen toggle then just re-reads this cache. */
+async function loadCityHistories() {
+  let latest = [];
   try {
-    envDocs = await API.getLatestEnv();
+    latest = await API.getLatestEnv();
   } catch (err) {
-    console.warn("Could not load environmental data:", err.message);
-    envDocs = [];
+    console.warn("Could not load city list:", err.message);
+    return;
   }
+
+  const entries = await Promise.all(
+    latest.map(async (doc) => {
+      try {
+        const docs = await API.getCityTimeseries(doc.city, HISTORY_DAYS);
+        return [doc.city, { coords: doc.location?.coordinates, docs }];
+      } catch (err) {
+        console.warn(`Could not load history for ${doc.city}:`, err.message);
+        return [doc.city, { coords: doc.location?.coordinates, docs: [] }];
+      }
+    })
+  );
+  cityHistories = Object.fromEntries(entries);
+}
+
+async function init() {
+  await loadCityHistories();
   renderAllergenLayer(document.getElementById("allergenSelect").value);
 }
 
