@@ -125,13 +125,68 @@ async function buildSeverityChart(city) {
   }
 }
 
+// ---------------------------------------------------------------------------
+// Custom date range (task: "custom date range for pollen forecasts")
+// ---------------------------------------------------------------------------
+
+const startDateInput = document.getElementById("startDateInput");
+const endDateInput = document.getElementById("endDateInput");
+const rangeHintEl = document.getElementById("rangeHint");
+
+/** Read the active custom range, or null if either field is empty. */
+function getActiveRange() {
+  const start = startDateInput.value;
+  const end = endDateInput.value;
+  return start && end ? { start, end } : null;
+}
+
+document.getElementById("clearRangeBtn").addEventListener("click", () => {
+  startDateInput.value = "";
+  endDateInput.value = "";
+  rangeHintEl.textContent = "";
+  loadDashboard();
+});
+
+/** Clamp the date pickers to what the providers can realistically populate. */
+async function initCapabilityHints() {
+  try {
+    const caps = await API.getCapabilities();
+    const today = new Date();
+    const toISO = (d) => d.toISOString().slice(0, 10);
+
+    const minDate = new Date(today);
+    minDate.setDate(minDate.getDate() - caps.open_meteo.max_past_days);
+    const maxDate = new Date(today);
+    maxDate.setDate(maxDate.getDate() + caps.open_meteo.forecast_days);
+
+    [startDateInput, endDateInput].forEach((el) => {
+      el.min = toISO(minDate);
+      el.max = toISO(maxDate);
+    });
+
+    rangeHintEl.textContent =
+      `Pollen forecast: Google covers the next ${caps.google_pollen.max_forecast_days} days (primary); ` +
+      `Open-Meteo covers ${caps.open_meteo.max_past_days} days back to ${caps.open_meteo.forecast_days} days ` +
+      `ahead (fallback + history). Dates outside Google's window use Open-Meteo automatically.`;
+  } catch (err) {
+    console.warn("Could not load provider capabilities:", err.message);
+  }
+}
+
 async function loadDashboard() {
   const city = document.getElementById("citySelect").value;
-  const days = parseInt(document.getElementById("daysSelect").value, 10);
+  const range = getActiveRange();
   destroyAll();
 
+  if (range && range.end < range.start) {
+    rangeHintEl.textContent = "End date must not be before start date.";
+    return;
+  }
+
   try {
-    const docs = await API.getCityTimeseries(city, days);
+    const docs = range
+      ? await API.getCityTimeseriesRange(city, range.start, range.end)
+      : await API.getCityTimeseries(city, parseInt(document.getElementById("daysSelect").value, 10));
     buildPollenChart(docs);
     buildAqiChart(docs);
     buildWeatherChart(docs);
@@ -148,9 +203,11 @@ async function loadDashboard() {
   }
 
   await buildSeverityChart(city);
+  await loadForecast(city);
 }
 
 document.getElementById("loadBtn").addEventListener("click", loadDashboard);
+initCapabilityHints();
 loadDashboard();
 
 // ---------------------------------------------------------------------------
@@ -294,8 +351,11 @@ function setForecastStatus(msg, isError = false) {
 
 async function loadForecast(city) {
   setForecastStatus("Loading forecast…");
+  const range = getActiveRange();
   try {
-    const data = await API.getPredictions(city);
+    const data = range
+      ? await API.getPredictionsRange(city, range.start, range.end)
+      : await API.getPredictions(city);
     if (!data.variables || !Object.keys(data.variables).length) {
       setForecastStatus("No predictions stored yet. Click 'Run Prediction' to generate.");
       return;
@@ -335,5 +395,5 @@ document.getElementById("citySelect").addEventListener("change", () => {
   loadForecast(document.getElementById("citySelect").value);
 });
 
-// Auto-load on page open
-loadForecast(document.getElementById("citySelect").value);
+// Note: initial forecast load happens via loadDashboard() at the top of this
+// file, which calls loadForecast() itself after the env charts are drawn.

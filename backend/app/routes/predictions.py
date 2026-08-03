@@ -3,9 +3,16 @@ Prediction routes for the AllergyMap platform.
 
 Routes:
   GET  /api/predictions/<city>             — latest stored forecast for all variables
+                                              (optional ?start_date=&end_date=YYYY-MM-DD)
   GET  /api/predictions/<city>/<variable>  — latest stored forecast for one variable
+                                              (optional ?start_date=&end_date=YYYY-MM-DD)
   POST /api/predictions/run                — trigger ML training + forecast for a city
         body: {"city": "Athens", "source": "csv"}   (source optional, default "csv")
+
+start_date/end_date filter the stored forecast (predictor.py generates 168
+hourly points = 7 days from whenever /run last completed for that city). A
+range outside that stored window is not an error -- it just returns an empty
+list, since re-running the forecast is a separate, explicit POST /run call.
 
 The POST endpoint imports predictor.py from data_collection/ at call time,
 so scikit-learn / numpy are only required when a prediction is actually run.
@@ -21,6 +28,7 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify, request, current_app
 from ..extensions import mongo
+from ..utils.validation import parse_date_range
 
 bp = Blueprint("predictions", __name__)
 
@@ -65,6 +73,14 @@ def _import_predictor():
     return _p
 
 
+def _filter_by_date_range(docs: list[dict], start_date, end_date) -> list[dict]:
+    """Keep only docs whose forecast_timestamp date falls within [start_date, end_date]."""
+    if not (start_date and end_date):
+        return docs
+    start_iso, end_iso = start_date.isoformat(), end_date.isoformat()
+    return [d for d in docs if start_iso <= d["forecast_timestamp"][:10] <= end_iso]
+
+
 def _latest_predictions(city: str, variable: str | None = None) -> list[dict]:
     """
     Return the most recent set of forecast documents for a city (+ optional variable).
@@ -102,7 +118,12 @@ def _latest_predictions(city: str, variable: str | None = None) -> list[dict]:
 @bp.get("/<city>")
 def city_predictions(city: str):
     """Return the latest forecast for all variables for a city, grouped by variable."""
-    docs = _latest_predictions(city)
+    try:
+        start_date, end_date = parse_date_range(request.args)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    docs = _filter_by_date_range(_latest_predictions(city), start_date, end_date)
     if not docs:
         return jsonify({"city": city, "variables": {}, "message": "No predictions found. POST /api/predictions/run to generate."}), 404
 
@@ -120,7 +141,12 @@ def city_predictions(city: str):
 @bp.get("/<city>/<variable>")
 def city_variable_predictions(city: str, variable: str):
     """Return the latest forecast for one variable in a city."""
-    docs = _latest_predictions(city, variable)
+    try:
+        start_date, end_date = parse_date_range(request.args)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    docs = _filter_by_date_range(_latest_predictions(city, variable), start_date, end_date)
     if not docs:
         return jsonify({"city": city, "variable": variable, "forecasts": [], "message": "No predictions found."}), 404
 

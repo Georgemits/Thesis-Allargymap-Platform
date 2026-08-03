@@ -30,9 +30,22 @@ const API = (() => {
     getLatestEnv: () =>
       request("/api/env/latest"),
 
-    /** Fetch time series for a city. */
+    /** Fetch time series for a city over a relative window (last `days` days). */
     getCityTimeseries: (city, days = 7) =>
       request(`/api/env/city/${encodeURIComponent(city)}?days=${days}`),
+
+    /**
+     * Fetch time series for a city over an explicit date range.
+     * startDate/endDate: "YYYY-MM-DD" strings (inclusive).
+     */
+    getCityTimeseriesRange: (city, startDate, endDate) =>
+      request(
+        `/api/env/city/${encodeURIComponent(city)}` +
+          `?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`
+      ),
+
+    /** Provider date-range limits (Google Pollen ~5-day forecast, Open-Meteo forecast/past/archive), for clamping the date picker. */
+    getCapabilities: () => request("/api/env/capabilities"),
 
     /** Fetch recent reports for a city. */
     getCityReports: (city, limit = 200) =>
@@ -41,6 +54,13 @@ const API = (() => {
     /** Fetch the latest stored 7-day AI forecast for a city (all variables). */
     getPredictions: (city) =>
       request(`/api/predictions/${encodeURIComponent(city)}`),
+
+    /** Fetch the latest stored AI forecast for a city, filtered to an explicit date range. */
+    getPredictionsRange: (city, startDate, endDate) =>
+      request(
+        `/api/predictions/${encodeURIComponent(city)}` +
+          `?start_date=${encodeURIComponent(startDate)}&end_date=${encodeURIComponent(endDate)}`
+      ),
 
     /**
      * Trigger ML training + forecast for a city.

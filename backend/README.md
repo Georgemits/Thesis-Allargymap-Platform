@@ -19,10 +19,11 @@ backend/
     ├── routes/
     │   ├── health.py         ← GET /health
     │   ├── reports.py        ← POST/GET /api/reports, GET /api/reports/heatmap
-    │   ├── env_data.py       ← GET /api/env/latest, GET /api/env/city/<city>
-    │   └── predictions.py    ← GET/POST /api/predictions/* (lazily imports data_collection/predictor.py)
+    │   ├── env_data.py       ← GET /api/env/latest, /city/<city> (?days= or ?start_date=&end_date=), /capabilities
+    │   └── predictions.py    ← GET/POST /api/predictions/* (?start_date=&end_date= supported too; lazily imports data_collection/predictor.py)
     └── utils/
-        └── geo.py            ← haversine distance, nearest_city()
+        ├── geo.py             ← haversine distance, nearest_city()
+        └── validation.py       ← parse_date_range() -- shared start_date/end_date validation for env_data.py and predictions.py
 ```
 
 ## Configuration
@@ -47,6 +48,27 @@ cp .env.example .env   # then fill in real values; .env is gitignored
 pip install -r requirements.txt
 python run.py                 # http://localhost:5000
 ```
+
+## Custom date ranges
+
+`GET /api/env/city/<city>` and `GET /api/predictions/<city>[/<variable>]` accept
+either a relative `?days=N` window (default) or an explicit
+`?start_date=YYYY-MM-DD&end_date=YYYY-MM-DD` range. Both ends are validated
+(`app/utils/validation.py`) and return HTTP 400 with a message on malformed
+or inverted ranges. `GET /api/env/capabilities` returns each provider's actual
+date-range limits (Google Pollen: ~5-day forecast only; Open-Meteo: 7-day
+forecast / 92-day past / full weather archive) so a frontend date picker can
+clamp itself instead of hard-coding those numbers.
+
+## Testing
+
+```bash
+python -m unittest discover -s tests -v
+```
+
+Tests cover `parse_date_range()` and the predictions date-range filter only
+(pure functions, no MongoDB required). Route-level/integration testing needs
+a running MongoDB -- not currently automated.
 
 ## Note on the `predictions` blueprint
 

@@ -237,7 +237,9 @@ Once the backend is running, you can test these in your browser or with a tool l
 | GET    | `/api/reports/`                  | List all reports (add `?city=Athens&limit=50`)|
 | GET    | `/api/reports/heatmap`           | Get GeoJSON data for the map heatmap          |
 | GET    | `/api/env/latest`                | Latest environmental data for each city       |
-| GET    | `/api/env/city/Athens`           | Time series for Athens (add `?days=7`)        |
+| GET    | `/api/env/city/Athens`           | Time series for Athens (`?days=7`, or `?start_date=&end_date=YYYY-MM-DD`) |
+| GET    | `/api/env/capabilities`          | Provider date-range limits (for UI date pickers) |
+| GET    | `/api/predictions/Athens`        | Latest stored AI forecast (`?start_date=&end_date=YYYY-MM-DD` optional) |
 
 **Example — submit a test report:**
 ```powershell
