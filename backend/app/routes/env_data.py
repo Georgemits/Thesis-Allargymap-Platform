@@ -2,6 +2,11 @@
 Routes:
   GET /api/env/latest          — latest snapshot per city
   GET /api/env/city/<city>     — time series for one city (?days=7)
+
+Each returned document is the full env_snapshots document (see
+backend/app/models/env_snapshot.py) -- pollen (grains/m3 + Google UPI) and
+air_quality (including `dust`, CAMS-sourced via Open-Meteo) are exposed
+together, unfiltered, alongside weather.
 """
 from flask import Blueprint, jsonify, request
 from bson import ObjectId

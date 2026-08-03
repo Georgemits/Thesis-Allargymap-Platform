@@ -76,7 +76,15 @@ AQI_VARS = [
     # Particulates — μg/m³ (paper 1 uses dust as objective input)
     "pm10",
     "pm2_5",
-    "dust",            # Saharan dust, common in Greece (paper 1)
+    # African/Saharan dust, common in Greece (paper 1). Open-Meteo's
+    # air-quality endpoint re-serves the CAMS (Copernicus Atmosphere
+    # Monitoring Service) global atmospheric composition model for this
+    # field -- it is not an Open-Meteo-native measurement or model.
+    # TODO(future work): an optional direct CAMS/Copernicus Atmosphere Data
+    # Store (ADS) integration would give full CAMS resolution + extra
+    # species, at the cost of a separate API key and NetCDF/GRIB handling.
+    # Not needed for v2 -- this passthrough is sufficient.
+    "dust",
     # Air quality indices
     "european_aqi",
     "european_aqi_pm10",
