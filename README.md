@@ -34,10 +34,11 @@ Thesis-Allargymap-Platform/
 │           └── geo.py         ← Location helper functions
 │
 ├── frontend/                  ← The website (plain HTML + JavaScript)
-│   ├── index.html             ← Main page: Leaflet map with symptom heatmap
+│   ├── index.html             ← Main page: Leaflet map with allergen heatmap
 │   ├── report.html            ← Form where users submit their symptoms (VAS tool)
-│   ├── dashboard.html         ← Charts for environmental + symptom data
-│   ├── css/style.css          ← Styling
+│   ├── dashboard.html         ← Charts for environmental + symptom data, date-range picker
+│   ├── css/style.css          ← Clinical dark theme (WCAG AA contrast-checked, see frontend/README.md)
+│   ├── README.md               ← Frontend-specific notes (design system, contrast notes)
 │   └── js/
 │       ├── api.js             ← Handles all communication with the backend
 │       ├── map.js             ← Controls the Leaflet map

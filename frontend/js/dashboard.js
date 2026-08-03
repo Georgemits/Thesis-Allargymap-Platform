@@ -3,6 +3,16 @@
  * Loads on dashboard.html.
  */
 
+// Chart.js defaults to dark tick/legend text and light gridlines, which are
+// invisible against the clinical dark theme (css/style.css). Pull the actual
+// theme colors from the CSS custom properties instead of duplicating hex
+// values here, so the two never drift apart.
+(() => {
+  const theme = getComputedStyle(document.documentElement);
+  Chart.defaults.color = theme.getPropertyValue("--text-secondary").trim();
+  Chart.defaults.borderColor = theme.getPropertyValue("--border").trim();
+})();
+
 let pollenChart, aqiChart, weatherChart, severityChart, forecastPollenChart, forecastWeatherChart;
 
 function destroyAll() {
