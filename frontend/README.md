@@ -24,12 +24,20 @@ files (nginx in Docker, or `python -m http.server` locally).
 `window.ALLERGYMAP_API_BASE` (unset by default, falls back to
 `http://localhost:5000`) lets you point the frontend at a different backend
 without editing `api.js` -- set it via a `<script>` tag before `api.js` loads.
+Each page includes `env.local.js` for this (gitignored, optional -- a missing
+file is a harmless 404, nothing breaks). Useful if your local Docker ports
+are remapped, e.g. because something else on the machine already holds 5000
+or 8080 (macOS's AirPlay Receiver commonly squats on 5000) -- see
+`docker/README.md` and `docker/docker-compose.override.yml`.
 
 ## Design system (`css/style.css`)
 
 A clinical dark theme: white/near-white text on a deep navy background, teal
 accent, generous whitespace, single type/spacing scale via CSS custom
-properties (`:root` block at the top of the file).
+properties (`:root` block at the top of the file). Typeface is IBM Plex Sans
+for text and IBM Plex Mono for anything that's a reading rather than prose
+(symptom scores, the map legend's value, dashboard selects) -- loaded from
+Google Fonts via a `<link>` in each page's `<head>`.
 
 **Contrast:** every text/background pairing actually used in the stylesheet
 was checked against WCAG 2.1 AA (4.5:1 for normal text, 3:1 for large
@@ -57,11 +65,21 @@ plugin), keyed by allergen concentration -- **not** the earlier per-report
 severity `circleMarker`s (that function was misleadingly named
 `renderHeatmap`; it's gone now, along with the now-unused
 `api.js:getHeatmap()`/`GET /api/reports/heatmap` frontend call). Data comes
-from `GET /api/env/latest` (one snapshot per city). The legend panel's
-`<select>` toggles which allergen the heat layer is keyed by: olive, grass,
-or ragweed pollen (grains/m3), or Saharan dust (ug/m3, see the CAMS
-provenance note in `data_collection/README.md`); the gradient bar and max
-value/unit update to match.
+from `GET /api/env/city/<city>?days=7` per city (fetched once via
+`GET /api/env/latest` for the city list, then in parallel) -- **not** the
+single latest row per city. That row is frequently the very edge of the
+fetched forecast window, where the pollen/dust models have no data yet, so
+`map.js` instead walks each city's last 7 days backwards and uses the most
+recent *non-null* reading per allergen. When every city is truly zero for an
+allergen (e.g. olive well outside its April-June season), the heat layer
+isn't rendered at all and the legend says so explicitly -- a heat layer with
+`minOpacity` would otherwise paint a visible blob even for confirmed-zero
+data, which is misleading.
+
+The legend panel's `<select>` toggles which allergen the heat layer is keyed
+by: olive, grass, or ragweed pollen (grains/m3), or Saharan dust (ug/m3, see
+the CAMS provenance note in `data_collection/README.md`); the gradient bar
+and max value/unit update to match.
 
 The ten predefined Greek cities (`data_collection/open_meteo_fetcher.py:GREEK_LOCATIONS`)
 are the only real data points -- Leaflet.heat's blur turns them into a

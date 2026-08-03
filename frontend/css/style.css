@@ -30,17 +30,24 @@
   --warn:         #fbbf24;  --warn-dark:    #78350f;
   --success:      #34d399;  --success-dark: #065f46;
 
-  --border:  rgba(255, 255, 255, 0.14);
-  --radius:  10px;
-  --shadow:  0 4px 18px rgba(0, 0, 0, 0.45);
+  --border:      rgba(255, 255, 255, 0.12);
+  --border-firm: rgba(255, 255, 255, 0.22);
+  --radius-sm: 4px;
+  --radius:    6px;
+  --shadow:    0 2px 6px rgba(0, 0, 0, 0.3);
 
-  /* Type scale */
+  /* Type -- IBM Plex Sans for text, IBM Plex Mono for readings/data
+     (a report full of numbers reads better set in a tabular monospace
+     than jammed into the body typeface). */
+  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
+
   --font-xs:   0.8rem;
   --font-sm:   0.9rem;
   --font-base: 1rem;
   --font-lg:   1.15rem;
   --font-xl:   1.5rem;
-  --font-2xl:  2rem;
+  --font-2xl:  1.9rem;
 
   /* Spacing scale -- generous whitespace */
   --space-1: 0.5rem;
@@ -51,7 +58,7 @@
 }
 
 body {
-  font-family: -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   background: var(--bg-canvas);
   color: var(--text-primary);
   line-height: 1.55;
@@ -59,6 +66,15 @@ body {
 }
 
 a { color: var(--accent); }
+
+/* Anything that's primarily a reading or a count reads as data, not prose. */
+.symptom-row output,
+#legendMax,
+.controls select,
+.controls input[type="date"],
+.legend-select-label select {
+  font-family: var(--font-mono);
+}
 
 /* ─── Navbar ─────────────────────────────────────────────────────────────────
    Shared markup block (identical on index.html/report.html/dashboard.html)
@@ -69,28 +85,30 @@ a { color: var(--accent); }
   border-bottom: 1px solid var(--border);
   color: var(--text-primary);
   display: flex;
-  align-items: center;
+  align-items: stretch;
+  height: 52px;
   gap: var(--space-3);
-  padding: var(--space-2) var(--space-4);
+  padding: 0 var(--space-4);
   position: sticky; top: 0; z-index: 1000;
 }
-.navbar .brand { font-weight: 700; font-size: var(--font-lg); letter-spacing: .01em; margin-right: auto; }
+.navbar .brand {
+  font-weight: 600; font-size: var(--font-base); letter-spacing: .06em; text-transform: uppercase;
+  margin-right: auto; display: flex; align-items: center; gap: .5rem;
+  align-self: center;
+}
+.navbar .brand::before { content: ""; width: 7px; height: 7px; background: var(--accent); flex-shrink: 0; }
 
-.navbar-links { display: flex; align-items: center; gap: var(--space-3); }
+.navbar-links { display: flex; align-items: stretch; gap: var(--space-1); }
 .navbar a {
-  color: var(--text-secondary); text-decoration: none; font-size: var(--font-sm);
-  padding: .45rem .7rem; border-radius: 999px;
-  border-bottom: 2px solid transparent;
-  transition: color .15s, background-color .15s, border-color .15s;
+  color: var(--text-secondary); text-decoration: none;
+  font-size: var(--font-sm); letter-spacing: .02em;
+  display: flex; align-items: center;
+  padding: 0 .8rem; border-top: 2px solid transparent;
+  transition: color .15s, border-color .15s;
 }
 .navbar a:hover { color: var(--text-primary); }
-.navbar a.active {
-  color: var(--text-primary);
-  background: rgba(45, 212, 191, .12);
-  border-bottom-color: var(--accent);
-  font-weight: 600;
-}
-.navbar a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.navbar a.active { color: var(--text-primary); border-top-color: var(--accent); font-weight: 600; }
+.navbar a:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
 
 /* Mobile hamburger toggle -- hidden on desktop, shown under the breakpoint below */
 .navbar-toggle {
@@ -98,6 +116,7 @@ a { color: var(--accent); }
   flex-direction: column; justify-content: space-between;
   width: 22px; height: 16px; padding: 0;
   background: none; border: none; cursor: pointer;
+  align-self: center;
 }
 .navbar-toggle span { display: block; height: 2px; background: var(--text-primary); border-radius: 1px; }
 .navbar-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
@@ -118,7 +137,7 @@ a { color: var(--accent); }
 }
 
 /* ─── Map Page ───────────────────────────────────────────────────────────── */
-#map { height: calc(100vh - 57px); width: 100%; }
+#map { height: calc(100vh - 53px); width: 100%; }
 
 .legend {
   position: fixed; bottom: var(--space-4); right: var(--space-3);
@@ -176,11 +195,14 @@ a { color: var(--accent); }
 }
 .form-group input::placeholder, .form-group textarea::placeholder { color: var(--text-secondary); }
 .form-group input:focus, .form-group textarea:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45, 212, 191, .25);
+  outline: none; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent);
 }
 
-fieldset { border: 1px solid var(--border); border-radius: var(--radius); padding: var(--space-3); margin-bottom: var(--space-3); }
-legend { font-weight: 600; color: var(--accent); padding: 0 .5rem; font-size: var(--font-sm); }
+fieldset { border: 1px solid var(--border-firm); border-radius: var(--radius); padding: var(--space-3); margin-bottom: var(--space-3); }
+legend {
+  font-weight: 600; color: var(--accent); padding: 0 .5rem; font-size: var(--font-xs);
+  letter-spacing: .08em; text-transform: uppercase;
+}
 
 .symptom-grid { display: flex; flex-direction: column; gap: var(--space-2); margin-top: var(--space-1); }
 .symptom-row {
@@ -190,7 +212,7 @@ legend { font-weight: 600; color: var(--accent); padding: 0 .5rem; font-size: va
 }
 .symptom-row label { font-size: var(--font-sm); color: var(--text-primary); }
 .symptom-row input[type=range] { accent-color: var(--accent); cursor: pointer; }
-.symptom-row output { font-weight: 700; color: var(--accent); text-align: right; }
+.symptom-row output { font-weight: 600; color: var(--accent); text-align: right; }
 
 .btn-primary {
   background: var(--accent); color: var(--text-on-accent);
@@ -229,7 +251,7 @@ legend { font-weight: 600; color: var(--accent); padding: 0 .5rem; font-size: va
   color-scheme: dark;
 }
 .controls select:focus, .controls input[type="date"]:focus {
-  outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(45, 212, 191, .25);
+  outline: none; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent);
 }
 .range-divider { color: var(--text-secondary); font-size: var(--font-sm); }
 .range-hint { font-size: var(--font-xs); margin: 0 0 var(--space-4); }
@@ -239,7 +261,10 @@ legend { font-weight: 600; color: var(--accent); padding: 0 .5rem; font-size: va
   grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
   gap: var(--space-3);
 }
-.chart-card h2 { font-size: var(--font-base); color: var(--text-primary); margin-bottom: var(--space-2); font-weight: 600; }
+.chart-card h2 {
+  font-size: var(--font-xs); color: var(--text-secondary); margin-bottom: var(--space-3);
+  font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+}
 .chart-card canvas { max-height: 260px; }
 
 /* ─── AI Forecast Section ────────────────────────────────────────────────── */
