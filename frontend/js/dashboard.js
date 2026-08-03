@@ -11,6 +11,10 @@
   const theme = getComputedStyle(document.documentElement);
   Chart.defaults.color = theme.getPropertyValue("--text-secondary").trim();
   Chart.defaults.borderColor = theme.getPropertyValue("--border").trim();
+  // Chart.js's default line borderWidth (3px) reads as heavy with this many
+  // overlapping series; every line chart below inherits this instead of
+  // repeating a per-dataset borderWidth.
+  Chart.defaults.elements.line.borderWidth = 1.5;
 })();
 
 let pollenChart, aqiChart, weatherChart, severityChart, forecastPollenChart, forecastWeatherChart;

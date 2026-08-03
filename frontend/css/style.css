@@ -269,14 +269,15 @@ legend {
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
-  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(460px, 1fr));
+  gap: var(--space-5);
 }
 .chart-card h2 {
-  font-size: var(--font-xs); color: var(--text-secondary); margin-bottom: var(--space-3);
+  font-size: var(--font-xs); color: var(--text-secondary); margin-bottom: var(--space-4);
   font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
 }
-.chart-card canvas { max-height: 260px; }
+.chart-card { padding-bottom: var(--space-4); }
+.chart-card canvas { max-height: 340px; }
 
 /* ─── AI Forecast Section ────────────────────────────────────────────────── */
 .forecast-section { margin-top: var(--space-4); }
@@ -286,4 +287,5 @@ legend {
   display: flex; justify-content: space-between; align-items: flex-start;
   flex-wrap: wrap; gap: var(--space-3); margin-bottom: var(--space-3);
 }
-.forecast-section canvas { max-height: 300px; }
+.forecast-section canvas { max-height: 360px; }
+.forecast-section canvas + canvas { margin-top: var(--space-4); }
