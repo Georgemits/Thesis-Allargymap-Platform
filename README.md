@@ -17,7 +17,8 @@ Thesis-Allargymap-Platform/
 ├── backend/                   ← Flask REST API (Python)
 │   ├── run.py                 ← Start the server with: python run.py
 │   ├── requirements.txt       ← Python packages needed
-│   ├── .env.example           ← Copy this to .env before running
+│   ├── .env.example           ← Copy this to .env before running (incl. GOOGLE_POLLEN_API_KEY)
+│   ├── README.md               ← Backend-specific notes
 │   └── app/
 │       ├── __init__.py        ← App setup (registers all routes)
 │       ├── config.py          ← Dev / Production settings
@@ -46,10 +47,17 @@ Thesis-Allargymap-Platform/
 ├── docker/                    ← Run everything with one command
 │   ├── docker-compose.yml     ← Starts Flask + MongoDB + nginx together
 │   ├── Dockerfile.backend     ← How to build the backend container
+│   ├── README.md               ← Docker-specific notes (env vars, ports)
 │   └── mongo-init/init.js     ← Sets up the database on first run
 │
 └── data_collection/           ← Fetches real environmental data
-    ├── open_meteo_fetcher.py  ← Pulls weather + pollen data from Open-Meteo
+    ├── open_meteo_fetcher.py   ← Weather + air quality + pollen (grains/m3) from Open-Meteo
+    ├── google_pollen_fetcher.py ← Daily pollen UPI (0-5) from the Google Pollen API (primary source)
+    ├── pollen_source.py         ← Normalizes both providers; Google primary, Open-Meteo fallback
+    ├── mongo_importer.py        ← Imports combined CSVs into MongoDB
+    ├── predictor.py              ← RandomForest forecasting (used by /api/predictions)
+    ├── tests/                    ← Unit tests (HTTP mocked)
+    ├── README.md                 ← Data-collection-specific notes (hybrid pollen source, scale mapping)
     ├── requirements.txt
     └── output/                ← CSVs and JSON saved here after each fetch
 ```
@@ -146,6 +154,9 @@ pip install -r requirements.txt
 
 # Create your local config file (copy the example)
 copy .env.example .env
+# Then edit .env and set GOOGLE_POLLEN_API_KEY (get one at
+# https://console.cloud.google.com/apis/library/pollen.googleapis.com).
+# Leave it blank to run on Open-Meteo pollen data only.
 ```
 
 **Step 2 — Start the backend server**
@@ -175,8 +186,14 @@ Then open http://localhost:8080 in your browser.
 
 ## Loading Real Environmental Data
 
-The `data_collection` folder contains a script that fetches real pollen,
-weather, and air quality data for 10 Greek cities from Open-Meteo (free, no API key needed).
+The `data_collection` folder fetches weather, air quality, and pollen data for
+10 Greek cities and imports it into MongoDB. Pollen uses a **hybrid source**:
+[Google's Pollen API](https://developers.google.com/maps/documentation/pollen)
+is primary (daily 0-5 Universal Pollen Index per plant), and
+[Open-Meteo](https://open-meteo.com/) is the fallback + historical/archive
+source (hourly grains/m3, no API key needed) — see
+`data_collection/README.md` for the full selection rule and why both values
+are kept side by side instead of converted.
 
 **Run it:**
 
@@ -186,7 +203,7 @@ cd path\to\Thesis-Allargymap-Platform\data_collection
 # Install dependencies (only needed once)
 pip install -r requirements.txt
 
-# Fetch a forecast for all Greek cities
+# Weather + air quality + Open-Meteo pollen, forecast, all Greek cities
 python open_meteo_fetcher.py --mode forecast
 
 # Or fetch the last 30 days of data
@@ -194,12 +211,18 @@ python open_meteo_fetcher.py --mode past --days 30
 
 # Or fetch a specific city
 python open_meteo_fetcher.py --city Athens --mode forecast
+
+# Google Pollen UPI forecast (needs GOOGLE_POLLEN_API_KEY; 5-day cap)
+python google_pollen_fetcher.py
+
+# Import into MongoDB (Google pollen primary by default, auto-falls back to
+# Open-Meteo for out-of-window/historical dates or if the key is unset)
+python mongo_importer.py
+# Or fetch + import in one step:
+python open_meteo_fetcher.py --mode forecast --push-to-mongo
 ```
 
 Output files (CSV + JSON) are saved to `data_collection/output/`.
-
-> **Note:** The fetcher currently saves to CSV files only. Automatic import into
-> MongoDB is the next step in development.
 
 ---
 
@@ -233,7 +256,7 @@ curl -X POST http://localhost:5000/api/reports/ `
 | Database     | MongoDB 7 (with 2dsphere geo indexes)           |
 | Frontend     | Vanilla JS, Leaflet.js, Chart.js                |
 | Container    | Docker Compose (Flask + MongoDB + nginx)        |
-| Data source  | Open-Meteo API (weather + pollen + air quality) |
+| Data source  | Google Pollen API (primary pollen) + Open-Meteo (weather + air quality + fallback/historical pollen) |
 
 ---
 

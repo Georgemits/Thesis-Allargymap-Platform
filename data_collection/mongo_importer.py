@@ -10,14 +10,22 @@ Document shape (matches backend/app/models/env_snapshot.py):
     "timestamp": datetime (UTC),
     "location":  {"type": "Point", "coordinates": [lon, lat]},   # GeoJSON
     "weather":   { temperature_2m, relative_humidity_2m, ... },
-    "pollen":    { grass_pollen, olive_pollen, ... },
+    "pollen":    { grass_pollen, olive_pollen, ... },             # Open-Meteo, grains/m3
+    "pollen_upi": { "overall": {...}, "plants": {...} } | None,   # Google UPI 0-5, or None
+    "pollen_source": "google" | "open_meteo",
+    "pollen_source_fallback_reason": str,   # present only when Google was tried and skipped
     "air_quality": { pm10, pm2_5, dust, european_aqi, ... },
 }
+
+Pollen fields are attached by pollen_source.py's enrich_docs_with_pollen_source()
+-- see that module's docstring for the full google/open_meteo selection rule and
+the grains/m3-vs-UPI scale-mapping rationale.
 
 Duplicate handling: upsert on (city, timestamp) — safe to run repeatedly.
 
 Usage (CLI):
-    python mongo_importer.py                         # import all CSVs in output/
+    python mongo_importer.py                         # import all CSVs in output/ (Google primary)
+    python mongo_importer.py --pollen-source open_meteo
     python mongo_importer.py --file output/Athens_combined_20260314_120000.csv
     python mongo_importer.py --uri mongodb://localhost:27017/allergymap
 
@@ -35,6 +43,8 @@ from pathlib import Path
 import pandas as pd
 from pymongo import MongoClient, UpdateOne
 from pymongo.errors import BulkWriteError
+
+from pollen_source import VALID_SOURCES, enrich_docs_with_pollen_source
 
 # ---------------------------------------------------------------------------
 # Column classification
@@ -163,9 +173,19 @@ def df_to_documents(df: pd.DataFrame) -> list[dict]:
 # MongoDB write
 # ---------------------------------------------------------------------------
 
-def import_dataframe(df: pd.DataFrame, mongo_uri: str | None = None) -> int:
+def import_dataframe(
+    df: pd.DataFrame,
+    mongo_uri: str | None = None,
+    pollen_source: str = "google",
+) -> int:
     """
     Upsert all rows of `df` into the env_snapshots collection.
+
+    pollen_source : "google" (default, primary) or "open_meteo". See
+        pollen_source.py for the full selection + fallback rule. "google"
+        attaches Google's daily UPI to each row and falls back to
+        Open-Meteo-only automatically for rows outside Google's forecast
+        window (e.g. any --mode past/historical batch).
 
     Returns the number of documents inserted or modified.
     Uses bulk upserts keyed on (city, timestamp) to avoid duplicates.
@@ -174,10 +194,14 @@ def import_dataframe(df: pd.DataFrame, mongo_uri: str | None = None) -> int:
         print("  [mongo] DataFrame is empty — nothing to import.")
         return 0
 
+    if pollen_source not in VALID_SOURCES:
+        raise ValueError(f"Unknown pollen_source: {pollen_source!r} (expected one of {VALID_SOURCES})")
+
     if mongo_uri is None:
         mongo_uri = get_mongo_uri()
 
     docs = df_to_documents(df)
+    docs = enrich_docs_with_pollen_source(docs, source=pollen_source)
 
     client = MongoClient(mongo_uri, serverSelectionTimeoutMS=5000)
     try:
@@ -220,17 +244,22 @@ def import_dataframe(df: pd.DataFrame, mongo_uri: str | None = None) -> int:
 # CSV file helpers
 # ---------------------------------------------------------------------------
 
-def import_csv_file(csv_path: Path, mongo_uri: str | None = None) -> int:
+def import_csv_file(
+    csv_path: Path,
+    mongo_uri: str | None = None,
+    pollen_source: str = "google",
+) -> int:
     """Load a single combined CSV file and import it into MongoDB."""
     print(f"\n{'='*60}")
     print(f"Importing: {csv_path.name}")
     df = pd.read_csv(csv_path, parse_dates=["datetime"])
-    return import_dataframe(df, mongo_uri)
+    return import_dataframe(df, mongo_uri, pollen_source=pollen_source)
 
 
 def import_all_from_output(
     output_dir: Path = OUTPUT_DIR,
     mongo_uri: str | None = None,
+    pollen_source: str = "google",
 ) -> int:
     """
     Find all *_combined_*.csv files in output_dir and import them.
@@ -245,7 +274,7 @@ def import_all_from_output(
     total = 0
     for csv_path in csv_files:
         try:
-            total += import_csv_file(csv_path, mongo_uri)
+            total += import_csv_file(csv_path, mongo_uri, pollen_source=pollen_source)
         except Exception as exc:
             print(f"  [ERROR] {csv_path.name}: {exc}", file=sys.stderr)
 
@@ -280,6 +309,12 @@ Examples:
         "--uri", dest="mongo_uri", metavar="MONGO_URI",
         help="MongoDB connection string (overrides MONGO_URI env var and .env file)",
     )
+    parser.add_argument(
+        "--pollen-source", dest="pollen_source", choices=["google", "open_meteo"], default="google",
+        help="Primary pollen source: 'google' (default, falls back to Open-Meteo "
+             "automatically for out-of-window/historical dates) or 'open_meteo' "
+             "(skip Google entirely).",
+    )
     return parser.parse_args()
 
 
@@ -291,9 +326,9 @@ def main() -> None:
         if not args.file.exists():
             print(f"Error: file not found: {args.file}", file=sys.stderr)
             sys.exit(1)
-        import_csv_file(args.file, mongo_uri)
+        import_csv_file(args.file, mongo_uri, pollen_source=args.pollen_source)
     else:
-        import_all_from_output(args.output_dir, mongo_uri)
+        import_all_from_output(args.output_dir, mongo_uri, pollen_source=args.pollen_source)
 
 
 if __name__ == "__main__":
