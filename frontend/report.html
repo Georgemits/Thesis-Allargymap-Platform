@@ -25,7 +25,7 @@
 
   <main class="container">
     <h1>Report Your Symptoms</h1>
-    <p class="hint">Rate each symptom on a 0–12 scale (0 = none, 12 = severe).</p>
+    <p class="hint">Rate each symptom on a 0–10 scale (0 = none, 10 = severe).</p>
 
     <form id="reportForm" class="card">
       <div id="locationStatus" class="info-box">Detecting your location…</div>
@@ -38,36 +38,66 @@
       </div>
 
       <fieldset>
-        <legend>Symptoms (VAS 0–12)</legend>
+        <legend>Symptoms (VAS 0–10)</legend>
+        <datalist id="vasTicks">
+          <option value="0"></option><option value="1"></option><option value="2"></option>
+          <option value="3"></option><option value="4"></option><option value="5"></option>
+          <option value="6"></option><option value="7"></option><option value="8"></option>
+          <option value="9"></option><option value="10"></option>
+        </datalist>
         <div class="symptom-grid">
           <div class="symptom-row" data-symptom="sneezing">
             <label>Sneezing</label>
-            <input type="range" min="0" max="12" value="0" />
+            <div class="slider-track">
+              <span class="slider-endpoint">None</span>
+              <input type="range" min="0" max="10" value="0" list="vasTicks" />
+              <span class="slider-endpoint">Severe</span>
+            </div>
             <output>0</output>
           </div>
           <div class="symptom-row" data-symptom="runny_nose">
             <label>Runny Nose</label>
-            <input type="range" min="0" max="12" value="0" />
+            <div class="slider-track">
+              <span class="slider-endpoint">None</span>
+              <input type="range" min="0" max="10" value="0" list="vasTicks" />
+              <span class="slider-endpoint">Severe</span>
+            </div>
             <output>0</output>
           </div>
           <div class="symptom-row" data-symptom="itchy_eyes">
             <label>Itchy Eyes</label>
-            <input type="range" min="0" max="12" value="0" />
+            <div class="slider-track">
+              <span class="slider-endpoint">None</span>
+              <input type="range" min="0" max="10" value="0" list="vasTicks" />
+              <span class="slider-endpoint">Severe</span>
+            </div>
             <output>0</output>
           </div>
           <div class="symptom-row" data-symptom="cough">
             <label>Cough</label>
-            <input type="range" min="0" max="12" value="0" />
+            <div class="slider-track">
+              <span class="slider-endpoint">None</span>
+              <input type="range" min="0" max="10" value="0" list="vasTicks" />
+              <span class="slider-endpoint">Severe</span>
+            </div>
             <output>0</output>
           </div>
           <div class="symptom-row" data-symptom="skin_rash">
             <label>Skin Rash</label>
-            <input type="range" min="0" max="12" value="0" />
+            <div class="slider-track">
+              <span class="slider-endpoint">None</span>
+              <input type="range" min="0" max="10" value="0" list="vasTicks" />
+              <span class="slider-endpoint">Severe</span>
+            </div>
             <output>0</output>
           </div>
           <div class="symptom-row" data-symptom="wheezing">
             <label>Wheezing</label>
-            <input type="range" min="0" max="12" value="0" />
+            <div class="slider-track">
+              <span class="slider-endpoint">None</span>
+              <input type="range" min="0" max="10" value="0" list="vasTicks" />
+              <span class="slider-endpoint">Severe</span>
+            </div>
             <output>0</output>
           </div>
         </div>

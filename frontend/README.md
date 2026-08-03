@@ -8,7 +8,7 @@ files (nginx in Docker, or `python -m http.server` locally).
 | Page             | Purpose                                             |
 |-------------------|------------------------------------------------------|
 | `index.html`       | Leaflet map (symptom report locations / allergen heatmap) |
-| `report.html`       | Symptom report form (VAS 0-12 sliders, geolocation)    |
+| `report.html`       | Symptom report form (VAS 0-10 sliders, geolocation)    |
 | `dashboard.html`     | Environmental charts (Chart.js) + AI pollen forecast, with a relative "Days" window or a custom date-range picker |
 
 ## JS (`js/`)

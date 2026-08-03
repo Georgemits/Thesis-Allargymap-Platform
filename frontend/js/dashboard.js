@@ -122,7 +122,7 @@ async function buildSeverityChart(city) {
       },
       options: {
         responsive: true,
-        scales: { y: { min: 0, max: 12 } },
+        scales: { y: { min: 0, max: 10 } },
         plugins: { legend: { position: "bottom" } },
       },
     });

@@ -4,12 +4,27 @@
  */
 
 // ── Sliders ────────────────────────────────────────────────────────────────
+// Color-code the live reading so severity is visible at a glance, not just
+// as a number: 0-3 mild (success), 4-7 moderate (warn), 8-10 severe (danger).
+function severityClass(value) {
+  if (value <= 3) return "sev-low";
+  if (value <= 7) return "sev-mid";
+  return "sev-high";
+}
+
 document.querySelectorAll(".symptom-row").forEach((row) => {
   const slider = row.querySelector("input[type=range]");
   const output = row.querySelector("output");
-  slider.addEventListener("input", () => {
-    output.textContent = slider.value;
-  });
+
+  const update = () => {
+    const value = parseInt(slider.value, 10);
+    output.textContent = value;
+    output.classList.remove("sev-low", "sev-mid", "sev-high");
+    output.classList.add(severityClass(value));
+  };
+
+  slider.addEventListener("input", update);
+  update();
 });
 
 // ── Geolocation ───────────────────────────────────────────────────────────
@@ -81,7 +96,11 @@ form.addEventListener("submit", async (e) => {
     msgEl.textContent = "Report submitted successfully. Thank you!";
     msgEl.className = "form-msg success";
     form.reset();
-    document.querySelectorAll(".symptom-row output").forEach((o) => (o.textContent = "0"));
+    document.querySelectorAll(".symptom-row output").forEach((o) => {
+      o.textContent = "0";
+      o.classList.remove("sev-mid", "sev-high");
+      o.classList.add("sev-low");
+    });
   } catch (err) {
     msgEl.textContent = `Error: ${err.message}`;
     msgEl.className = "form-msg error";

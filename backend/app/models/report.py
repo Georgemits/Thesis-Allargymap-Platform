@@ -12,14 +12,14 @@ Document shape:
     },
     "city": str,             # optional resolved city name
     "symptoms": {
-        "sneezing":    int,  # 0-12 VAS scale (Visual Analogue Scale)
+        "sneezing":    int,  # 0-10 VAS scale (Visual Analogue Scale)
         "runny_nose":  int,
         "itchy_eyes":  int,
         "cough":       int,
         "skin_rash":   int,
         "wheezing":    int,
     },
-    "overall_severity": int, # 0-12 computed or user-provided
+    "overall_severity": int, # 0-10 computed or user-provided
     "notes": str,            # optional free text
 }
 
@@ -31,6 +31,8 @@ MongoDB indexes to create at startup (see mongo-init/init.js):
 
 from datetime import datetime, timezone
 
+VAS_MAX = 10  # symptom slider scale: 0 (none) .. VAS_MAX (severe)
+
 
 def build_report(user_id: str, lon: float, lat: float, symptoms: dict,
                  city: str = "", notes: str = "") -> dict:
@@ -39,7 +41,7 @@ def build_report(user_id: str, lon: float, lat: float, symptoms: dict,
     clean_symptoms = {}
     for field in vas_fields:
         val = symptoms.get(field, 0)
-        clean_symptoms[field] = max(0, min(12, int(val)))
+        clean_symptoms[field] = max(0, min(VAS_MAX, int(val)))
 
     overall = round(sum(clean_symptoms.values()) / len(vas_fields))
 
