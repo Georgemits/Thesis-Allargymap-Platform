@@ -29,6 +29,10 @@ Thumbs.db
 
 # Docker
 docker/.env
+docker/docker-compose.override.yml
+
+# Frontend local dev override (see frontend/README.md)
+frontend/env.local.js
 
 # MongoDB data (if running locally outside Docker)
 mongo_data/
