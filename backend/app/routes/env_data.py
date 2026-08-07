@@ -11,9 +11,8 @@ air_quality (including `dust`, CAMS-sourced via Open-Meteo) are exposed
 together, unfiltered, alongside weather.
 """
 from flask import Blueprint, jsonify, request
-from bson import ObjectId
 from ..extensions import mongo
-from ..utils.validation import parse_date_range
+from ..utils.validation import parse_date_range, parse_positive_int
 
 bp = Blueprint("env_data", __name__)
 
@@ -69,6 +68,7 @@ def city_timeseries(city: str):
 
     try:
         start_date, end_date = parse_date_range(request.args)
+        days = parse_positive_int(request.args, "days", default=7, maximum=400)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -77,7 +77,6 @@ def city_timeseries(city: str):
         until = datetime.combine(end_date, datetime.min.time(), tzinfo=timezone.utc) + timedelta(days=1)
         query = {"city": city, "timestamp": {"$gte": since, "$lt": until}}
     else:
-        days = int(request.args.get("days", 7))
         since = datetime.now(timezone.utc) - timedelta(days=days)
         query = {"city": city, "timestamp": {"$gte": since}}
 

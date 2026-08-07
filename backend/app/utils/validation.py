@@ -49,3 +49,30 @@ def parse_date_range(
         raise ValueError(f"Date range too large (max {max_range_days} days).")
 
     return start, end
+
+
+def parse_positive_int(args, name: str, default: int, maximum: int | None = None) -> int:
+    """
+    Parse an optional positive-integer query param (e.g. ?days=7, ?limit=100).
+
+    Returns `default` when the param is absent. When `maximum` is given the
+    value is clamped to it rather than rejected, so an over-large request
+    still succeeds with a capped result set.
+
+    Raises ValueError (caller should catch and return HTTP 400) when the value
+    is not an integer or is not >= 1 -- without this, a stray `?days=abc`
+    would surface as an unhandled 500.
+    """
+    raw = args.get(name)
+    if raw is None or raw == "":
+        return default
+
+    try:
+        value = int(raw)
+    except (TypeError, ValueError):
+        raise ValueError(f"{name} must be an integer.")
+
+    if value < 1:
+        raise ValueError(f"{name} must be >= 1.")
+
+    return min(value, maximum) if maximum is not None else value

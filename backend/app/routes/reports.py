@@ -5,9 +5,9 @@ Routes:
   GET  /api/reports/heatmap  — GeoJSON FeatureCollection for Leaflet heatmap
 """
 from flask import Blueprint, jsonify, request
-from bson import ObjectId
 from ..extensions import mongo
 from ..models.report import build_report
+from ..utils.validation import parse_positive_int
 
 bp = Blueprint("reports", __name__)
 
@@ -42,7 +42,10 @@ def submit_report():
 @bp.get("/")
 def list_reports():
     city = request.args.get("city")
-    limit = min(int(request.args.get("limit", 100)), 500)
+    try:
+        limit = parse_positive_int(request.args, "limit", default=100, maximum=500)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     query = {"city": city} if city else {}
     docs = list(mongo.db.reports.find(query).sort("timestamp", -1).limit(limit))
     return jsonify([_serialize(d) for d in docs]), 200
@@ -52,7 +55,12 @@ def list_reports():
 def heatmap_geojson():
     """Return GeoJSON FeatureCollection for all reports (last 30 days by default)."""
     from datetime import datetime, timezone, timedelta
-    days = int(request.args.get("days", 30))
+
+    try:
+        days = parse_positive_int(request.args, "days", default=30, maximum=400)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     since = datetime.now(timezone.utc) - timedelta(days=days)
     docs = list(mongo.db.reports.find(
         {"timestamp": {"$gte": since}},

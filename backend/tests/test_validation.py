@@ -1,4 +1,4 @@
-"""Unit tests for app.utils.validation.parse_date_range."""
+"""Unit tests for app.utils.validation (parse_date_range, parse_positive_int)."""
 
 import sys
 import unittest
@@ -6,7 +6,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.utils.validation import parse_date_range  # noqa: E402
+from app.utils.validation import parse_date_range, parse_positive_int  # noqa: E402
 
 
 class FakeArgs(dict):
@@ -54,6 +54,39 @@ class TestParseDateRange(unittest.TestCase):
             FakeArgs(start_date="2026-08-01", end_date="2026-08-06"), max_range_days=5
         )
         self.assertEqual((end - start).days, 5)
+
+
+class TestParsePositiveInt(unittest.TestCase):
+    def test_absent_returns_default(self):
+        self.assertEqual(parse_positive_int(FakeArgs(), "days", default=7), 7)
+
+    def test_empty_string_returns_default(self):
+        self.assertEqual(parse_positive_int(FakeArgs(days=""), "days", default=7), 7)
+
+    def test_valid_value(self):
+        self.assertEqual(parse_positive_int(FakeArgs(days="30"), "days", default=7), 30)
+
+    def test_non_numeric_raises(self):
+        with self.assertRaises(ValueError):
+            parse_positive_int(FakeArgs(days="abc"), "days", default=7)
+
+    def test_zero_raises(self):
+        with self.assertRaises(ValueError):
+            parse_positive_int(FakeArgs(days="0"), "days", default=7)
+
+    def test_negative_raises(self):
+        with self.assertRaises(ValueError):
+            parse_positive_int(FakeArgs(days="-5"), "days", default=7)
+
+    def test_clamped_to_maximum(self):
+        self.assertEqual(
+            parse_positive_int(FakeArgs(limit="9999"), "limit", default=100, maximum=500), 500
+        )
+
+    def test_below_maximum_unchanged(self):
+        self.assertEqual(
+            parse_positive_int(FakeArgs(limit="50"), "limit", default=100, maximum=500), 50
+        )
 
 
 if __name__ == "__main__":
