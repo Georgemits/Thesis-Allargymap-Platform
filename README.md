@@ -238,6 +238,10 @@ cd data_collection
 # pollen and dust. Run this once, before anything else.
 python scheduler.py --backfill 92
 
+# The weather endpoint only reaches back ~70 days, so the oldest weeks come
+# back with null temperature and humidity. Close that gap from the archive:
+python scheduler.py --fill-weather 2026-05-26 2026-06-19
+
 # Then let it run on a schedule (twice daily by default)
 python scheduler.py
 ```

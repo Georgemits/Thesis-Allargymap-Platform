@@ -79,5 +79,70 @@ class TestCliValidation(unittest.TestCase):
         self.assertNotIn("Atlantis", omf.GREEK_LOCATIONS)
 
 
+class UtcNormalisationTests(unittest.TestCase):
+    """Open-Meteo answers in local time; everything downstream must be UTC.
+
+    Regression guard for a bug found on 2026-08-26: `utc_offset_seconds` was
+    ignored, so naive Athens local times were stored labelled as UTC and every
+    record sat 2-3 hours away from the truth.
+    """
+
+    #: +3h, i.e. Europe/Athens in summer, exactly as the live API returns it.
+    OFFSET = 10800
+
+    def _response(self, **extra_keys):
+        response = {
+            "latitude": 37.98,
+            "longitude": 23.73,
+            "utc_offset_seconds": self.OFFSET,
+            "timezone": "Europe/Athens",
+            "hourly": {
+                "time": ["2026-08-03T00:00", "2026-08-03T01:00"],
+                "temperature_2m": [28.1, 27.5],
+            },
+        }
+        response.update(extra_keys)
+        return response
+
+    def test_datetime_column_is_shifted_back_to_utc(self):
+        df = omf._hourly_to_df(self._response(), "Athens")
+        self.assertEqual(str(df["datetime"].iloc[0]), "2026-08-02 21:00:00")
+        self.assertEqual(str(df["datetime"].iloc[1]), "2026-08-02 22:00:00")
+
+    def test_local_time_is_preserved_alongside(self):
+        df = omf._hourly_to_df(self._response(), "Athens")
+        self.assertEqual(str(df["datetime_local"].iloc[0]), "2026-08-03 00:00:00")
+
+    def test_missing_offset_is_treated_as_utc(self):
+        response = self._response()
+        del response["utc_offset_seconds"]
+        df = omf._hourly_to_df(response, "Athens")
+        self.assertEqual(str(df["datetime"].iloc[0]), "2026-08-03 00:00:00")
+
+    def test_null_offset_is_treated_as_utc(self):
+        df = omf._hourly_to_df(self._response(utc_offset_seconds=None), "Athens")
+        self.assertEqual(str(df["datetime"].iloc[0]), "2026-08-03 00:00:00")
+
+    def test_winter_offset_is_two_hours(self):
+        response = self._response(utc_offset_seconds=7200)
+        response["hourly"]["time"] = ["2026-01-15T00:00", "2026-01-15T01:00"]
+        df = omf._hourly_to_df(response, "Athens")
+        self.assertEqual(str(df["datetime"].iloc[0]), "2026-01-14 22:00:00")
+
+    def test_merge_keeps_a_single_local_column(self):
+        weather = self._response()
+        aqi = self._response()
+        aqi["hourly"] = {
+            "time": ["2026-08-03T00:00", "2026-08-03T01:00"],
+            "olive_pollen": [12.0, 10.5],
+        }
+        _, _, combined = omf.build_dataframes(
+            {"weather": weather, "air_quality": aqi}, "Athens"
+        )
+        local_columns = [c for c in combined.columns if c.startswith("datetime_local")]
+        self.assertEqual(local_columns, ["datetime_local"])
+        self.assertEqual(len(combined), 2)
+
+
 if __name__ == "__main__":
     unittest.main()

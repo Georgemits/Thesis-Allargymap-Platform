@@ -111,6 +111,79 @@ python -m unittest discover -s tests -v
 All HTTP calls are mocked (`unittest.mock`) — no network access or API key
 is required to run the tests.
 
+## The two past windows are not the same length
+
+`--mode past --days 92` sends `past_days=92` to both endpoints, but they honour
+it differently:
+
+| Endpoint | Actual past coverage | Fields |
+|---|---|---|
+| air-quality | the full **92 days** | pollen, dust, PM10, PM2.5, AQI |
+| forecast (weather) | roughly **70 days** | temperature, humidity, wind, pressure, precipitation, cloud, UV |
+
+Because the two frames are merged on the hour, the earlier rows still exist —
+they simply carry `null` weather. Measured on 2026-08-26, a 92-day backfill
+produced pollen and dust from 25 May but temperature and humidity only from
+18 June: 23 days of the olive season with no temperature, which is one half of
+the allergen-versus-weather correlation.
+
+The archive API (weather back to 1940) closes the gap:
+
+```bash
+python scheduler.py --backfill 92                          # everything, 92 days
+python scheduler.py --fill-weather 2026-05-26 2026-06-19   # weather for the gap
+```
+
+### Why partial sources can be layered safely
+
+Two rules in `mongo_importer` make this work:
+
+1. **Dotted paths.** Updates write `weather.temperature_2m`, never a whole
+   `weather` sub-document, so one group cannot replace another.
+2. **Nulls are written only on insert.** Real values go in `$set`, nulls in
+   `$setOnInsert`. A brand-new hour still gets the full field shape, but no
+   pass can ever blank a value another pass supplied.
+
+Rule 1 alone is not enough, and finding that out cost 6000 hours of olive
+pollen on 2026-08-26: `pollen_source.normalize_open_meteo` returns all six
+plant keys explicitly set to None when the frame has no pollen columns, so a
+weather-only import carries a full sub-document *of nulls* and dotted paths
+wrote them faithfully. Rule 2 closes it.
+
+A useful consequence is that the passes are **order-independent** -- re-running
+`--backfill 92` after a weather fill no longer re-nulls the weather it filled.
+
+`uv_index` is absent from the archive, so it stays null over the filled range.
+
+Pick the range from the data rather than from the calendar — query the first
+non-null `weather.temperature_2m` and fill from the window start up to it.
+
+## Timestamps: everything is UTC
+
+Open-Meteo is queried with `timezone=auto`, so it answers in **local** time
+(`2026-08-03T00:00` meaning 00:00 Europe/Athens) and reports the offset
+separately in `utc_offset_seconds`. Taking those strings at face value and
+labelling them UTC shifts every record by two hours in winter and three in
+summer -- enough to misalign environmental data against user symptom reports
+and to corrupt any hour-of-day analysis, without ever raising an error.
+
+The pipeline therefore normalises on the way in:
+
+| Column / field | Meaning |
+|---|---|
+| `datetime` (CSV) / `timestamp` (Mongo) | naive **UTC** -- the canonical key used for merges, upserts, and every query |
+| `datetime_local` (CSV only) | the original local time, kept for human inspection and for matching sources that publish per-local-day values, such as Google's daily UPI |
+
+The API mirrors the same rule: `backend/app/utils/serialization.py` renders
+every datetime with an explicit `+00:00` offset, because a browser parses an
+offset-less date-time string as local time.
+
+> Found on 2026-08-26, after the first 92-day backfill had already been
+> imported with shifted timestamps. If a database predates the fix, clear
+> `env_snapshots` and re-run the backfill -- the upsert key is
+> `(city, timestamp)`, so corrected rows would otherwise land beside the old
+> ones instead of replacing them.
+
 ## Scheduled collection (`scheduler.py`)
 
 `scheduler.py` turns the pipeline from a manual command into a continuously

@@ -209,7 +209,7 @@ class FetchLocationsTests(unittest.TestCase):
     def test_one_failing_city_does_not_abort_the_others(self):
         good = pd.DataFrame({"city": ["Patras"]})
 
-        def fake(name, lat, lon, mode, days, output_dir):
+        def fake(name, lat, lon, mode, days, output_dir, start_date=None, end_date=None):
             if name == "Athens":
                 raise RuntimeError("API down")
             return good
@@ -243,6 +243,48 @@ class RunCycleTests(unittest.TestCase):
             total = scheduler.run_cycle(config, "mongodb://x/y")
         self.assertEqual(total, 7)
         self.assertEqual(run_pass.call_count, 1)
+
+
+class WeatherFillTests(unittest.TestCase):
+    """The archive-backed gap fill for weather-only history."""
+
+    def test_it_requests_historical_mode_with_the_given_range(self):
+        with mock.patch.object(scheduler, "run_pass", return_value=99) as run_pass:
+            affected = scheduler.run_weather_fill(
+                _base_config(), "2026-05-25", "2026-06-19", "mongodb://x/y")
+        self.assertEqual(affected, 99)
+        kwargs = run_pass.call_args.kwargs
+        self.assertEqual(kwargs["mode"], "historical")
+        self.assertEqual(kwargs["start_date"], "2026-05-25")
+        self.assertEqual(kwargs["end_date"], "2026-06-19")
+
+    def test_it_never_calls_google_for_archive_dates(self):
+        with mock.patch.object(scheduler, "run_pass", return_value=0) as run_pass:
+            scheduler.run_weather_fill(
+                _base_config(), "2026-05-25", "2026-06-19", "mongodb://x/y")
+        self.assertEqual(run_pass.call_args.kwargs["pollen_source"], "open_meteo")
+
+    def test_the_range_reaches_the_fetcher(self):
+        with mock.patch.object(scheduler, "run_for_location",
+                               return_value=pd.DataFrame()) as fetch:
+            scheduler.fetch_locations(
+                {"Athens": {"latitude": 1.0, "longitude": 2.0}},
+                mode="historical", output_dir=Path("/tmp"),
+                start_date="2026-05-25", end_date="2026-06-19",
+            )
+        self.assertEqual(fetch.call_args.kwargs["start_date"], "2026-05-25")
+        self.assertEqual(fetch.call_args.kwargs["end_date"], "2026-06-19")
+
+
+class ParseIsoDateTests(unittest.TestCase):
+    def test_valid_date_passes_through(self):
+        self.assertEqual(scheduler.parse_iso_date("2026-05-25"), "2026-05-25")
+
+    def test_malformed_dates_are_rejected(self):
+        for bad in ("25-05-2026", "2026-13-01", "2026-05", "yesterday"):
+            with self.subTest(bad=bad):
+                with self.assertRaises(ValueError):
+                    scheduler.parse_iso_date(bad)
 
 
 if __name__ == "__main__":

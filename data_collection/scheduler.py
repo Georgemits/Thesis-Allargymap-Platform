@@ -249,6 +249,8 @@ def fetch_locations(
     mode: str,
     output_dir: Path,
     days: int | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
 ) -> pd.DataFrame:
     """Fetch one mode for every location and concatenate the results.
 
@@ -257,10 +259,12 @@ def fetch_locations(
 
     Args:
         locations: Mapping of city name to coordinates.
-        mode: One of 'forecast' or 'past', as understood by
+        mode: One of 'forecast', 'past', or 'historical', as understood by
             `open_meteo_fetcher.run_for_location`.
         output_dir: Directory for the intermediate CSV/JSON artefacts.
         days: Number of past days, for mode='past'.
+        start_date: Range start 'YYYY-MM-DD', for mode='historical'.
+        end_date: Range end 'YYYY-MM-DD', for mode='historical'.
 
     Returns:
         The concatenated hourly DataFrame, empty if every city failed.
@@ -274,6 +278,8 @@ def fetch_locations(
                 lon=coords["longitude"],
                 mode=mode,
                 days=days,
+                start_date=start_date,
+                end_date=end_date,
                 output_dir=output_dir,
             )
             if not frame.empty:
@@ -294,6 +300,8 @@ def run_pass(
     output_dir: Path,
     mongo_uri: str,
     days: int | None = None,
+    start_date: str | None = None,
+    end_date: str | None = None,
     dry_run: bool = False,
 ) -> int:
     """Run a single fetch-and-upsert pass.
@@ -301,18 +309,23 @@ def run_pass(
     Args:
         label: Human-readable pass name, used in log lines.
         locations: Mapping of city name to coordinates.
-        mode: 'forecast' or 'past'.
+        mode: 'forecast', 'past', or 'historical'.
         pollen_source: 'google' or 'open_meteo'.
         output_dir: Directory for the intermediate artefacts.
         mongo_uri: MongoDB connection string.
         days: Number of past days, for mode='past'.
+        start_date: Range start 'YYYY-MM-DD', for mode='historical'.
+        end_date: Range end 'YYYY-MM-DD', for mode='historical'.
         dry_run: When true, fetch and report but write nothing to MongoDB.
 
     Returns:
         The number of documents inserted or modified (0 on a dry run).
     """
     LOGGER.info("[%s] fetching %d location(s), mode=%s, days=%s", label, len(locations), mode, days)
-    frame = fetch_locations(locations, mode=mode, output_dir=output_dir, days=days)
+    frame = fetch_locations(
+        locations, mode=mode, output_dir=output_dir, days=days,
+        start_date=start_date, end_date=end_date,
+    )
 
     if frame.empty:
         LOGGER.warning("[%s] no rows fetched — skipping import.", label)
@@ -404,6 +417,67 @@ def run_backfill(config: dict, days: int, mongo_uri: str, dry_run: bool = False)
         days=days,
         dry_run=dry_run,
     )
+
+
+def run_weather_fill(
+    config: dict,
+    start_date: str,
+    end_date: str,
+    mongo_uri: str,
+    dry_run: bool = False,
+) -> int:
+    """Fill weather-only gaps from Open-Meteo's archive API.
+
+    The two past-data endpoints do not reach equally far back. The
+    air-quality endpoint honours the full `past_days=92`, but the weather
+    forecast endpoint retains roughly 70 days, so a 92-day backfill lands
+    pollen and dust for the whole window and temperature and humidity for
+    only part of it. The archive API covers weather from 1940 and closes that
+    gap.
+
+    Safe to overlay on existing documents: `mongo_importer` writes dotted
+    paths, so this fills `weather.*` without touching the pollen or air
+    quality already stored for the same hours. `uv_index` is absent from the
+    archive and stays null for the filled range.
+
+    Args:
+        config: The effective configuration.
+        start_date: Range start, 'YYYY-MM-DD'.
+        end_date: Range end, 'YYYY-MM-DD'. The archive lags reality by a few
+            days; ask for a date too recent and the tail comes back empty.
+        mongo_uri: MongoDB connection string.
+        dry_run: When true, write nothing to MongoDB.
+
+    Returns:
+        The number of documents inserted or modified.
+    """
+    return run_pass(
+        label=f"weather-fill {start_date}..{end_date}",
+        locations=resolve_locations(config),
+        mode="historical",
+        pollen_source="open_meteo",
+        output_dir=resolve_output_dir(config),
+        mongo_uri=mongo_uri,
+        start_date=start_date,
+        end_date=end_date,
+        dry_run=dry_run,
+    )
+
+
+def parse_iso_date(value: str) -> str:
+    """Validate a 'YYYY-MM-DD' string and return it unchanged.
+
+    Args:
+        value: The candidate date string.
+
+    Returns:
+        The same string, once confirmed parseable.
+
+    Raises:
+        ValueError: If the string is not an ISO calendar date.
+    """
+    datetime.strptime(value, "%Y-%m-%d")
+    return value
 
 
 def prune_output(output_dir: Path, retention_days: int | None) -> int:
@@ -541,6 +615,9 @@ Examples:
   python scheduler.py                        run forever on the configured schedule
   python scheduler.py --once                 single cycle, then exit (cron / CI)
   python scheduler.py --backfill 92          one-off 92-day historical load
+  python scheduler.py --fill-weather 2026-05-25 2026-06-19
+                                             close the weather-only gap the
+                                             92-day backfill leaves behind
   python scheduler.py --run-at 06:00,18:00   override the schedule for this run
   python scheduler.py --once --dry-run       fetch and report, write nothing
         """,
@@ -551,6 +628,11 @@ Examples:
                         help="Run a single cycle immediately and exit")
     parser.add_argument("--backfill", type=int, metavar="DAYS",
                         help="Run a one-off historical load of DAYS past days (1-92), then exit")
+    parser.add_argument("--fill-weather", nargs=2, metavar=("START", "END"),
+                        help="Fill weather-only gaps from the archive API over the "
+                             "'YYYY-MM-DD YYYY-MM-DD' range, then exit. Use this after "
+                             "--backfill: the weather endpoint reaches back ~70 days "
+                             "while air quality reaches 92")
     parser.add_argument("--run-at", metavar="HH:MM[,HH:MM...]",
                         help="Override the daily run times")
     parser.add_argument("--timezone", metavar="TZ",
@@ -597,7 +679,9 @@ def main() -> None:
     signal.signal(signal.SIGTERM, _handle_stop)
 
     try:
-        if args.backfill:
+        if args.fill_weather:
+            run_weather_fill(config, *args.fill_weather, mongo_uri, dry_run=args.dry_run)
+        elif args.backfill:
             run_backfill(config, args.backfill, mongo_uri, dry_run=args.dry_run)
         elif args.once:
             run_cycle(config, mongo_uri, dry_run=args.dry_run)
@@ -623,6 +707,10 @@ def validate_and_build(args: argparse.Namespace) -> dict:
     config = apply_overrides(load_config(args.config), args)
     if args.backfill is not None and not 0 < args.backfill <= 92:
         raise ValueError("--backfill must be between 1 and 92 days.")
+    if args.fill_weather:
+        start, end = (parse_iso_date(value) for value in args.fill_weather)
+        if start > end:
+            raise ValueError("--fill-weather START must not be after END.")
     validate_config(config)
     return config
 

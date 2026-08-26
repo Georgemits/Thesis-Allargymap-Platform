@@ -22,6 +22,10 @@ Pollen fields are attached by pollen_source.py's enrich_docs_with_pollen_source(
 the grains/m3-vs-UPI scale-mapping rationale.
 
 Duplicate handling: upsert on (city, timestamp) — safe to run repeatedly.
+Partial sources merge: updates use dotted paths, and null readings are
+written only on insert ($setOnInsert), so a weather-only import (e.g. the
+archive API) fills its own fields without blanking pollen or air quality
+already stored for the same hour. Passes are order-independent.
 
 Usage (CLI):
     python mongo_importer.py                         # import all CSVs in output/ (Google primary)
@@ -164,6 +168,86 @@ def row_to_document(row: pd.Series) -> dict:
     }
 
 
+#: Measurement groups stored as sub-documents. Flattened into dotted-path
+#: updates so a partial source can fill its own fields without erasing the
+#: others.
+MEASUREMENT_GROUPS = ("weather", "pollen", "air_quality")
+
+
+def flatten_for_set(doc: dict) -> dict:
+    """Flatten a document into dotted-path keys suitable for a `$set` update.
+
+    Different sources cover different fields: the air-quality endpoint serves
+    92 past days while the weather forecast endpoint serves roughly 70, and the
+    archive API serves weather only. Setting whole sub-documents would let a
+    weather-only import replace an existing `pollen` sub-document with the
+    empty dict `row_to_document` produces when no pollen column is present,
+    silently destroying data already collected for those hours.
+
+    Dotted paths update only the fields actually carried by this row, so
+    sources merge into one another instead of overwriting.
+
+    Args:
+        doc: A document from `row_to_document`.
+
+    Returns:
+        A flat mapping of `$set` paths to values. Empty measurement groups
+        contribute nothing.
+
+    Examples:
+        >>> flatten_for_set({"city": "Athens", "weather": {"t": 1}, "pollen": {}})
+        {'city': 'Athens', 'weather.t': 1}
+    """
+    flat: dict = {}
+    for key, value in doc.items():
+        if key in MEASUREMENT_GROUPS and isinstance(value, dict):
+            for field, field_value in value.items():
+                flat[f"{key}.{field}"] = field_value
+        else:
+            flat[key] = value
+    return flat
+
+
+def build_upsert_update(doc: dict) -> dict:
+    """Build the update operator for one document, so nulls can never destroy data.
+
+    Dotted paths alone are not enough. `pollen_source.normalize_open_meteo`
+    returns all six plant keys explicitly set to None when the incoming frame
+    has no pollen columns, so a weather-only import still carries a full
+    `pollen` sub-document -- of nulls -- and would overwrite real readings
+    with them.
+
+    The rule here is stronger and does not depend on the caller getting the
+    source right: a null is written **only when the document is new**. Real
+    values go in `$set`; nulls go in `$setOnInsert`, which MongoDB applies
+    only on an actual insert. A new hour therefore still gets the full field
+    shape, and no pass can ever blank a value another pass supplied.
+
+    A useful consequence: passes become order-independent. Re-running the
+    92-day backfill after an archive weather fill no longer re-nulls the
+    weather it just filled.
+
+    Args:
+        doc: A document from `row_to_document`, already pollen-enriched.
+
+    Returns:
+        An update document with `$set` and, when the row carries any nulls,
+        `$setOnInsert`. The two never share a path.
+
+    Examples:
+        >>> build_upsert_update({"city": "Athens", "weather": {"t": 1, "uv": None}})
+        {'$set': {'city': 'Athens', 'weather.t': 1}, '$setOnInsert': {'weather.uv': None}}
+    """
+    flat = flatten_for_set(doc)
+    present = {key: value for key, value in flat.items() if value is not None}
+    missing = {key: value for key, value in flat.items() if value is None}
+
+    update: dict = {"$set": present}
+    if missing:
+        update["$setOnInsert"] = missing
+    return update
+
+
 def df_to_documents(df: pd.DataFrame) -> list[dict]:
     """Convert an entire combined DataFrame to a list of documents."""
     return [row_to_document(row) for _, row in df.iterrows()]
@@ -221,7 +305,7 @@ def import_dataframe(
     operations = [
         UpdateOne(
             filter={"city": doc["city"], "timestamp": doc["timestamp"]},
-            update={"$set": doc},
+            update=build_upsert_update(doc),
             upsert=True,
         )
         for doc in docs

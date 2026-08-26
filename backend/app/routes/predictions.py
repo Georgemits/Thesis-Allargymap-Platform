@@ -28,6 +28,7 @@ from pathlib import Path
 
 from flask import Blueprint, jsonify, request, current_app
 from ..extensions import mongo
+from ..utils.serialization import iso_utc, serialize_doc
 from ..utils.validation import parse_date_range
 
 bp = Blueprint("predictions", __name__)
@@ -38,11 +39,8 @@ bp = Blueprint("predictions", __name__)
 # ---------------------------------------------------------------------------
 
 def _serialize(doc: dict) -> dict:
-    doc["_id"] = str(doc["_id"])
-    for field in ("forecast_timestamp", "generated_at"):
-        if field in doc and hasattr(doc[field], "isoformat"):
-            doc[field] = doc[field].isoformat()
-    return doc
+    """Make a prediction document JSON-safe, timestamps in explicit UTC."""
+    return serialize_doc(doc, datetime_fields=("forecast_timestamp", "generated_at"))
 
 
 def _find_data_collection() -> Path:
@@ -212,8 +210,8 @@ def run_predictions():
     summary = {
         var: {
             "count": len(fcs),
-            "from": fcs[0]["forecast_timestamp"].isoformat() if fcs else None,
-            "to":   fcs[-1]["forecast_timestamp"].isoformat() if fcs else None,
+            "from": iso_utc(fcs[0]["forecast_timestamp"]) if fcs else None,
+            "to":   iso_utc(fcs[-1]["forecast_timestamp"]) if fcs else None,
         }
         for var, fcs in results.items()
     }

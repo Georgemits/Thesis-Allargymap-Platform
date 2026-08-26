@@ -16,6 +16,10 @@ Supports:
 
 No API key required.
 
+Timestamps: every request uses ``timezone=auto``, so the API answers in local
+time. All output is normalised to naive **UTC** in the ``datetime`` column,
+with the original local time preserved alongside as ``datetime_local``.
+
 Usage (CLI):
     python open_meteo_fetcher.py                        # forecast, all cities
     python open_meteo_fetcher.py --mode past --days 30  # last 30 days, all cities
@@ -194,14 +198,44 @@ def fetch_historical(
 # ---------------------------------------------------------------------------
 
 def _hourly_to_df(api_response: dict, location_name: str) -> pd.DataFrame:
-    """Convert the `hourly` block of an Open-Meteo response to a DataFrame."""
+    """Convert the `hourly` block of an Open-Meteo response to a DataFrame.
+
+    Every request is made with ``timezone=auto``, so Open-Meteo returns *naive
+    local* timestamps (e.g. ``2026-08-03T00:00`` meaning 00:00 Europe/Athens)
+    together with a ``utc_offset_seconds`` field. Storing those strings as-is
+    and later labelling them UTC would shift every record by the offset -- two
+    hours in winter, three in summer -- which silently misaligns environmental
+    data against user symptom reports and corrupts any hour-of-day analysis.
+
+    This function therefore normalises to true UTC:
+
+    * ``datetime``       -- naive **UTC**, the canonical key used everywhere
+                            downstream (merges, CSV, MongoDB documents).
+    * ``datetime_local`` -- naive local time, kept for human inspection of the
+                            CSVs and for matching against sources that publish
+                            per-local-day values (e.g. Google's daily UPI).
+
+    Args:
+        api_response: A decoded Open-Meteo response containing an ``hourly``
+            block and, when ``timezone=auto`` was requested, the matching
+            ``utc_offset_seconds``.
+        location_name: City name to stamp on every row.
+
+    Returns:
+        The hourly DataFrame, empty if the response carried no hourly block.
+    """
     hourly = api_response.get("hourly", {})
     if not hourly:
         return pd.DataFrame()
 
     df = pd.DataFrame(hourly)
     df.rename(columns={"time": "datetime"}, inplace=True)
-    df["datetime"] = pd.to_datetime(df["datetime"])
+
+    local = pd.to_datetime(df["datetime"])
+    offset_seconds = api_response.get("utc_offset_seconds") or 0
+    df["datetime"] = local - pd.Timedelta(seconds=offset_seconds)
+    df["datetime_local"] = local
+
     df.insert(0, "location", location_name)
     df.insert(1, "latitude",  api_response.get("latitude"))
     df.insert(2, "longitude", api_response.get("longitude"))
@@ -228,7 +262,7 @@ def build_dataframes(
     else:
         combined_df = pd.merge(
             weather_df,
-            aqi_df.drop(columns=["latitude", "longitude"], errors="ignore"),
+            aqi_df.drop(columns=["latitude", "longitude", "datetime_local"], errors="ignore"),
             on=["location", "datetime"],
             how="inner",
         )

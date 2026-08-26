@@ -78,3 +78,12 @@ codebase instead ships ML forecasting as `data_collection/predictor.py`,
 invoked in-process by `routes/predictions.py` (`POST /api/predictions/run`).
 v2 development adapts to this existing structure rather than introducing a
 second Flask service, to avoid duplicating the RandomForest logic.
+
+## Timestamps
+
+All datetimes leaving the API carry an explicit `+00:00` offset, rendered by
+`app/utils/serialization.py` (`iso_utc`, `serialize_doc`). MongoDB stores BSON
+dates as UTC and pymongo returns them naive; emitting `.isoformat()` directly
+would produce an offset-less string, which browsers parse as **local** time --
+a silent two to three hour error for a Greek deployment. Use `serialize_doc`
+for any new route that returns documents.

@@ -12,6 +12,7 @@ together, unfiltered, alongside weather.
 """
 from flask import Blueprint, jsonify, request
 from ..extensions import mongo
+from ..utils.serialization import serialize_doc
 from ..utils.validation import parse_date_range, parse_positive_int
 
 bp = Blueprint("env_data", __name__)
@@ -37,10 +38,8 @@ PROVIDER_CAPABILITIES = {
 
 
 def _serialize(doc: dict) -> dict:
-    doc["_id"] = str(doc["_id"])
-    if "timestamp" in doc:
-        doc["timestamp"] = doc["timestamp"].isoformat()
-    return doc
+    """Make an env_snapshot document JSON-safe, timestamps in explicit UTC."""
+    return serialize_doc(doc)
 
 
 @bp.get("/latest")

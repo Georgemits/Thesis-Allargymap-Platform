@@ -7,16 +7,15 @@ Routes:
 from flask import Blueprint, jsonify, request
 from ..extensions import mongo
 from ..models.report import build_report
+from ..utils.serialization import serialize_doc
 from ..utils.validation import parse_positive_int
 
 bp = Blueprint("reports", __name__)
 
 
 def _serialize(doc: dict) -> dict:
-    doc["_id"] = str(doc["_id"])
-    if "timestamp" in doc:
-        doc["timestamp"] = doc["timestamp"].isoformat()
-    return doc
+    """Make a report document JSON-safe, timestamps in explicit UTC."""
+    return serialize_doc(doc)
 
 
 @bp.post("/")
