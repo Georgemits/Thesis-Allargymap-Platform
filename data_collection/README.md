@@ -11,6 +11,8 @@ platform and imports it into MongoDB (`env_snapshots` collection).
 | `google_pollen_fetcher.py`   | Daily pollen **Universal Pollen Index (UPI, 0-5)** from the Google Maps Platform Pollen API. Forecast only, capped at 5 days. Requires `GOOGLE_POLLEN_API_KEY`. |
 | `pollen_source.py`           | Source-agnostic abstraction: normalizes both providers into the `env_snapshots` pollen schema, with Google as primary and automatic Open-Meteo fallback. |
 | `mongo_importer.py`          | Imports combined Open-Meteo CSVs into MongoDB, attaching pollen fields via `pollen_source.py` (`--pollen-source google\|open_meteo`, default `google`). |
+| `scheduler.py`               | **Scheduled collector.** Runs the fetch -> normalise -> upsert pipeline on a daily schedule (`collector_config.json`). Also does one-off backfills (`--backfill N`) and single cron-style runs (`--once`). |
+| `collector_config.json`      | Schedule, city scope, retention, and per-pass pollen source for `scheduler.py`. Contains no secrets and is committed so the stack is clone-and-run. |
 | `predictor.py`               | RandomForest time-series forecasting (severity/pollen prediction), used by the backend's `/api/predictions` routes. |
 | `tests/`                     | Unit tests for both fetchers and the normalizer (HTTP calls mocked, no network/API key needed). |
 | `output/`                    | Generated CSV/JSON files (gitignored, regeneratable). |
@@ -109,11 +111,73 @@ python -m unittest discover -s tests -v
 All HTTP calls are mocked (`unittest.mock`) — no network access or API key
 is required to run the tests.
 
-## Scheduling note
+## Scheduled collection (`scheduler.py`)
 
-There is currently no standalone `scheduler.py`; the Docker `seeder` service
-(see `docker/README.md`) runs a one-shot `open_meteo_fetcher.py --push-to-mongo`
-on container start (`restart: "no"`). Periodic re-fetching today means
-re-running `docker compose run seeder` (or the equivalent script) on a cron /
-CI schedule outside the compose stack — a dedicated `scheduler.py` is a
-reasonable next step but is out of scope for the current task set.
+`scheduler.py` turns the pipeline from a manual command into a continuously
+running service, so the platform accumulates an unbroken observational record.
+
+### What one cycle does
+
+Each cycle runs two passes, both idempotent (upsert on `(city, timestamp)`):
+
+1. **Forecast pass** — Open-Meteo forecast window with Google's daily UPI
+   attached. Google's Pollen API is forecast-only and has **no historical
+   endpoint**, so a UPI value not captured on the day is lost permanently.
+   This is the pass that must not be missed.
+2. **Reanalysis pass** — re-fetches the last `reanalysis_pass.days` days from
+   Open-Meteo. Hours first stored as *forecasts* are progressively overwritten
+   by Open-Meteo's *analysed* values for the same hours, so the collection
+   converges towards observed conditions with no manual correction step. This
+   is why the two passes use different pollen sources by default.
+
+Intermediate CSV/JSON artefacts older than `retention_days` are pruned at the
+end of every cycle. MongoDB is the system of record; those files are
+regenerable.
+
+### Configuration
+
+`collector_config.json` (committed, no secrets). Any key may be omitted — the
+built-in defaults in `scheduler.DEFAULT_CONFIG` fill the gaps.
+
+| Key | Meaning |
+|-----|---------|
+| `timezone` | IANA name used to interpret `run_at` (default `Europe/Athens`). |
+| `run_at` | Daily run times as `HH:MM` strings. |
+| `cities` | List of city names, or `null` for every city in `GREEK_LOCATIONS`. |
+| `output_dir` | Where intermediate artefacts are written (relative to this directory). |
+| `retention_days` | Age limit for those artefacts; `0` disables pruning. |
+| `forecast_pass` | `{enabled, pollen_source}` — defaults to `google`. |
+| `reanalysis_pass` | `{enabled, days, pollen_source}` — defaults to 3 days of `open_meteo`. |
+| `backfill` | `{days, pollen_source}` — defaults used by `--backfill`. |
+
+`MONGO_URI` and `GOOGLE_POLLEN_API_KEY` are **never** read from this file; they
+come from the environment or `.env` (see above).
+
+### Usage
+
+```bash
+# One-off historical load — the widest retroactive window Open-Meteo serves
+# for pollen and dust is 92 days. Run this once, first.
+python scheduler.py --backfill 92
+
+# Run forever on the configured schedule (this is what the Docker service does)
+python scheduler.py
+
+# A single cycle, then exit — for cron, launchd, or CI
+python scheduler.py --once
+
+# Fetch and report without touching MongoDB
+python scheduler.py --once --dry-run
+
+# Override the schedule or scope for one run
+python scheduler.py --run-at 06:00,14:00,22:00 --cities Athens,Patras
+```
+
+Every parameter is overridable from the command line; run
+`python scheduler.py --help` for the full list.
+
+### In Docker
+
+The `collector` service (see `docker/README.md`) runs `scheduler.py` with
+`restart: unless-stopped`, writing its artefacts to the `collector_output`
+named volume. The older `seeder` service remains as a one-shot bootstrap.

@@ -226,6 +226,28 @@ python open_meteo_fetcher.py --mode forecast --push-to-mongo
 
 Output files (CSV + JSON) are saved to `data_collection/output/`.
 
+### Keeping it collecting automatically
+
+The commands above are one-off fetches. For a continuous record, use the
+scheduled collector instead:
+
+```bash
+cd data_collection
+
+# One-off historical load: 92 days is Open-Meteo's retroactive limit for
+# pollen and dust. Run this once, before anything else.
+python scheduler.py --backfill 92
+
+# Then let it run on a schedule (twice daily by default)
+python scheduler.py
+```
+
+Under Docker this is the `collector` service and starts with the stack —
+nothing extra to run. Google's Pollen API is forecast-only with no historical
+endpoint, so its daily UPI values exist only if something captured them on the
+day; that is the collector's main job. Configuration lives in
+`data_collection/collector_config.json`; see `data_collection/README.md`.
+
 ---
 
 ## API Endpoints

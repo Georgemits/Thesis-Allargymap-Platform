@@ -1,0 +1,27 @@
+{
+  "_comment": "Schedule and scope for scheduler.py. No secrets belong in this file: MONGO_URI and GOOGLE_POLLEN_API_KEY come from the environment or .env.",
+
+  "timezone": "Europe/Athens",
+  "run_at": ["06:00", "18:00"],
+
+  "cities": null,
+
+  "output_dir": "output",
+  "retention_days": 14,
+
+  "forecast_pass": {
+    "enabled": true,
+    "pollen_source": "google"
+  },
+
+  "reanalysis_pass": {
+    "enabled": true,
+    "days": 3,
+    "pollen_source": "open_meteo"
+  },
+
+  "backfill": {
+    "days": 92,
+    "pollen_source": "open_meteo"
+  }
+}

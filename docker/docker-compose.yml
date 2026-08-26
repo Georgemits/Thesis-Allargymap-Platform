@@ -47,6 +47,21 @@ services:
       MONGO_URI: mongodb://mongo:27017/allergymap
       GOOGLE_POLLEN_API_KEY: ${GOOGLE_POLLEN_API_KEY:-}
 
+  collector:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.collector
+    container_name: allergymap_collector
+    restart: unless-stopped
+    depends_on:
+      mongo:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://mongo:27017/allergymap
+      GOOGLE_POLLEN_API_KEY: ${GOOGLE_POLLEN_API_KEY:-}
+    volumes:
+      - collector_output:/app/data_collection/output
+
   frontend:
     image: nginx:alpine
     container_name: allergymap_frontend
@@ -60,3 +75,4 @@ services:
 
 volumes:
   mongo_data:
+  collector_output:

@@ -1,0 +1,24 @@
+# Scheduled environmental data collector for the AllergyMap platform.
+#
+# Long-running companion to the one-shot `seeder`: instead of a single fetch on
+# container start, this runs data_collection/scheduler.py, which wakes on the
+# schedule defined in collector_config.json and keeps env_snapshots current.
+FROM python:3.11-slim
+
+# tzdata backs zoneinfo, which the scheduler uses to honour Europe/Athens
+# regardless of the container's own clock setting.
+ENV PYTHONUNBUFFERED=1 \
+    TZ=Europe/Athens
+
+WORKDIR /app/data_collection
+
+COPY data_collection/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY data_collection/ .
+
+# Intermediate CSV/JSON artefacts live on a named volume so they survive
+# restarts and can be inspected; MongoDB remains the system of record.
+VOLUME ["/app/data_collection/output"]
+
+CMD ["python", "scheduler.py"]
