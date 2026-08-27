@@ -1,0 +1,33 @@
+# Build-context exclusions for docker/Dockerfile.{backend,seeder,collector}.
+# The build context is the repository root (docker-compose.yml sets `context: ..`),
+# so this file governs what those images can copy in.
+
+# Secrets: never bake an .env into an image.
+**/.env
+
+# Version control
+.git/
+.gitignore
+
+# Python bytecode and test caches
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+
+# Regenerable data (MongoDB is the system of record)
+data_collection/output/
+mongo_data/
+
+# Editor and OS cruft
+.vscode/
+.idea/
+**/.DS_Store
+Thumbs.db
+
+# Local-only frontend override
+frontend/env.local.js

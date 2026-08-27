@@ -16,13 +16,14 @@ an nginx-served frontend.
 
 ## Environment
 
-Create `docker/.env` (gitignored) alongside this compose file — Docker Compose
-automatically loads it for `${VAR}` substitution:
+Copy the committed template — Docker Compose automatically loads `.env` for
+`${VAR}` substitution, and `.env` itself is gitignored:
 
-```env
-SECRET_KEY=change-me
-GOOGLE_POLLEN_API_KEY=your-google-pollen-api-key-here
+```bash
+cp .env.example .env
 ```
+
+The defaults work as-is; no API key is required to bring the stack up.
 
 `GOOGLE_POLLEN_API_KEY` is passed through to the `backend`, `seeder`, and
 `collector` containers (`${GOOGLE_POLLEN_API_KEY:-}` — empty by default, which
@@ -33,7 +34,14 @@ makes them fall back to Open-Meteo-only pollen automatically; see
 
 ```bash
 cd docker
+cp .env.example .env
 docker compose up --build
+```
+
+Then load the historical dataset once (see [The collector](#the-collector)):
+
+```bash
+docker compose run --rm collector python scheduler.py --backfill 92
 ```
 
 | What        | URL                          |

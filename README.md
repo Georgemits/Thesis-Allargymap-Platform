@@ -9,6 +9,42 @@ dust, temperature) to produce live heatmaps and dashboards.
 
 ---
 
+## Quick Start for Reviewers
+
+Everything runs in Docker. On a machine with Docker Desktop installed:
+
+```bash
+git clone https://github.com/Georgemits/Thesis-Allargymap-Platform.git
+cd Thesis-Allargymap-Platform/docker
+cp .env.example .env          # defaults are fine, no API key needed
+docker compose up --build
+```
+
+| What | URL |
+|------|-----|
+| Frontend (map, report form, dashboard) | http://localhost:8080 |
+| Backend API health check | http://localhost:5000/health |
+
+**Loading the data.** The stack starts with an empty database and the `seeder`
+service fills in the last 30 days automatically. To load the full historical
+dataset this thesis reports on, run the backfill once after the stack is up:
+
+```bash
+docker compose run --rm collector python scheduler.py --backfill 92
+```
+
+It takes a few minutes and needs internet access. 92 days is the widest
+retroactive window Open-Meteo serves for pollen and dust. From then on the
+`collector` service keeps `env_snapshots` current on the schedule in
+`data_collection/collector_config.json`.
+
+**API keys are optional.** With `GOOGLE_POLLEN_API_KEY` left empty, pollen comes
+from Open-Meteo and the platform is fully functional. Supplying a Google Maps
+Platform key with the Pollen API enabled promotes Google to the primary pollen
+source, with Open-Meteo as the fallback and historical backfill provider.
+
+---
+
 ## What's Inside
 
 ```
