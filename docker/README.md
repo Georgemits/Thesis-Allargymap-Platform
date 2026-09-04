@@ -8,11 +8,27 @@ an nginx-served frontend.
 
 | Service    | Image / build              | Port         | Purpose |
 |------------|------------------------------|--------------|---------|
-| `mongo`     | `mongo:7`                    | 27017        | Database; runs `mongo-init/init.js` on first start (creates collections + indexes). |
+| `mongo`     | `mongo:7`                    | 27017        | Database; runs `mongo-init/init.js` on first start (creates collections + indexes). **Only on first start** — see the note below if your volume already exists. |
 | `backend`    | `Dockerfile.backend`         | 5000         | Flask API (gunicorn). |
 | `seeder`     | `Dockerfile.seeder`          | —            | One-shot: `open_meteo_fetcher.py --mode past --days 30 --push-to-mongo` (`restart: "no"`). |
 | `collector`  | `Dockerfile.collector`       | —            | Long-running: `scheduler.py` on the schedule in `data_collection/collector_config.json` (`restart: unless-stopped`). Writes to the `collector_output` volume. |
 | `frontend`    | `nginx:alpine`               | 8080         | Serves `../frontend` as static files. |
+
+### Indexes on an existing volume
+
+`mongo-init/init.js` runs once, when the `mongo_data` volume is created. If
+you already had the stack running before the `users` and `allergy_profiles`
+collections were added, their indexes do not exist yet and must be created by
+hand — the unique `device_id` index is what keeps the anonymous-identity
+upsert idempotent:
+
+```bash
+docker compose exec mongo mongosh allergymap --quiet --eval \
+  'db.users.createIndex({device_id:1},{unique:true}); db.allergy_profiles.createIndex({device_id:1},{unique:true})'
+```
+
+A fresh clone needs none of this.
+
 
 ## Environment
 

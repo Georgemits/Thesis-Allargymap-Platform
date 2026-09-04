@@ -4,7 +4,8 @@ Symptom report document schema (stored in MongoDB collection: reports).
 Document shape:
 {
     "_id": ObjectId,
-    "user_id": str,          # anonymous device/session ID
+    "user_id": str,          # anonymous device ID (UUID v4, see app.utils.identity);
+                             # unset on erasure, so the field may be absent
     "timestamp": datetime,
     "location": {
         "type": "Point",

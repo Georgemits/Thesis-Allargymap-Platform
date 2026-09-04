@@ -1,12 +1,20 @@
 """
 Routes:
-  POST /api/reports          — submit a symptom report
+  POST /api/reports          — submit a symptom report (requires X-Device-Id)
   GET  /api/reports          — list reports (optional ?city=&limit=)
   GET  /api/reports/heatmap  — GeoJSON FeatureCollection for Leaflet heatmap
+
+A submitted report is attributed to the anonymous device making the request
+(the ``X-Device-Id`` header, see `app.utils.identity`), never to an identifier
+chosen in the request body. Otherwise any client could submit reports "as"
+another participant, and the per-participant correlation and alerting built on
+top of this collection would be describing a person who never reported.
 """
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, g, jsonify, request
 from ..extensions import mongo
 from ..models.report import build_report
+from ..models.user import build_upsert
+from ..utils.identity import require_device_id
 from ..utils.serialization import serialize_doc
 from ..utils.validation import parse_positive_int
 
@@ -19,15 +27,17 @@ def _serialize(doc: dict) -> dict:
 
 
 @bp.post("/")
+@require_device_id
 def submit_report():
+    """Store one symptom report for the calling device."""
     data = request.get_json(silent=True) or {}
-    required = ["user_id", "lon", "lat", "symptoms"]
+    required = ["lon", "lat", "symptoms"]
     missing = [f for f in required if f not in data]
     if missing:
         return jsonify({"error": f"Missing fields: {missing}"}), 400
 
     doc = build_report(
-        user_id=data["user_id"],
+        user_id=g.device_id,
         lon=data["lon"],
         lat=data["lat"],
         symptoms=data["symptoms"],
@@ -35,6 +45,17 @@ def submit_report():
         notes=data.get("notes", ""),
     )
     result = mongo.db.reports.insert_one(doc)
+
+    # Reporting is itself proof of an active participant: register the device
+    # if this is its first contact and refresh last_seen_at either way, so the
+    # alerting engine never has to reconstruct the participant list from the
+    # reports collection.
+    mongo.db.users.update_one(
+        {"device_id": g.device_id},
+        build_upsert(g.device_id),
+        upsert=True,
+    )
+
     return jsonify({"inserted_id": str(result.inserted_id)}), 201
 
 

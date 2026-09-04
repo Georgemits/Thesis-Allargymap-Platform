@@ -1,26 +1,70 @@
 /**
  * api.js — thin fetch wrapper for the AllergyMap backend.
  * Exposes a global `API` object used by map.js, report.js, dashboard.js.
+ *
+ * Requests that concern the participant's own data pass `identified: true`,
+ * which attaches the anonymous device identity from identity.js as the
+ * `X-Device-Id` header. Everything else — environmental readings, forecasts,
+ * the public map — is sent without it, so the backend never sees which
+ * participant is *reading* the open data. That also avoids a CORS preflight
+ * on the map's per-city fetches, since a request with no custom header is a
+ * simple one. Load identity.js before this file.
  */
 const API = (() => {
   const BASE = window.ALLERGYMAP_API_BASE || "http://localhost:5000";
 
   async function request(path, options = {}) {
-    const res = await fetch(BASE + path, {
-      headers: { "Content-Type": "application/json" },
-      ...options,
-    });
+    const { identified = false, headers: extraHeaders, ...rest } = options;
+
+    const headers = { "Content-Type": "application/json", ...extraHeaders };
+    if (identified && typeof Identity !== "undefined") {
+      headers["X-Device-Id"] = Identity.getDeviceId();
+    }
+
+    const res = await fetch(BASE + path, { headers, ...rest });
     if (!res.ok) {
       const body = await res.json().catch(() => ({}));
-      throw new Error(body.error || `HTTP ${res.status}`);
+      const error = new Error(body.error || `HTTP ${res.status}`);
+      error.status = res.status;
+      throw error;
     }
     return res.json();
   }
 
   return {
-    /** Submit a symptom report. */
+    /** Submit a symptom report, attributed to this device. */
     submitReport: (payload) =>
-      request("/api/reports/", { method: "POST", body: JSON.stringify(payload) }),
+      request("/api/reports/", {
+        method: "POST",
+        identified: true,
+        body: JSON.stringify(payload),
+      }),
+
+    /**
+     * Register this device with the backend, or refresh its last-seen time.
+     * Idempotent — safe to call on every page load.
+     * @param {string} [alias] optional short label, e.g. "phone"
+     */
+    registerDevice: (alias) =>
+      request("/api/users/me", {
+        method: "POST",
+        identified: true,
+        body: JSON.stringify(alias === undefined ? {} : { alias }),
+      }),
+
+    /** Read this device's identity record. Rejects with status 404 when unknown. */
+    getMe: () => request("/api/users/me", { identified: true }),
+
+    /**
+     * Erase this participant server-side (identity + allergy profile).
+     * @param {boolean} [deleteReports=false] also delete the symptom reports
+     *   instead of unlinking them from the participant.
+     */
+    eraseMe: (deleteReports = false) =>
+      request(`/api/users/me${deleteReports ? "?delete_reports=true" : ""}`, {
+        method: "DELETE",
+        identified: true,
+      }),
 
     /** Fetch latest env snapshot per city. */
     getLatestEnv: () =>

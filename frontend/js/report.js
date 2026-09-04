@@ -1,6 +1,6 @@
 /**
  * report.js — Handles geolocation, slider updates, and form submission.
- * Loads on report.html.
+ * Loads on report.html, after identity.js and api.js.
  */
 
 // ── Sliders ────────────────────────────────────────────────────────────────
@@ -53,15 +53,6 @@ if (navigator.geolocation) {
 const form   = document.getElementById("reportForm");
 const msgEl  = document.getElementById("formMsg");
 
-function getUserId() {
-  let uid = localStorage.getItem("allergymap_uid");
-  if (!uid) {
-    uid = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2);
-    localStorage.setItem("allergymap_uid", uid);
-  }
-  return uid;
-}
-
 form.addEventListener("submit", async (e) => {
   e.preventDefault();
   msgEl.className = "form-msg hidden";
@@ -82,8 +73,10 @@ form.addEventListener("submit", async (e) => {
     symptoms[key] = value;
   });
 
+  // No user_id here on purpose: the backend attributes the report to the
+  // device that sent it (identity.js -> X-Device-Id header), so a client
+  // cannot report on another participant's behalf.
   const payload = {
-    user_id: getUserId(),
     lat,
     lon,
     city: document.getElementById("city").value.trim(),

@@ -64,6 +64,7 @@ Thesis-Allargymap-Platform/
 │       │   └── env_snapshot.py← Environmental data (pollen, weather)
 │       ├── routes/
 │       │   ├── health.py      ← GET /health  (just checks the server is alive)
+│       │   ├── users.py       ← POST/GET/DELETE /api/users/me (anonymous identity)
 │       │   ├── reports.py     ← POST/GET /api/reports  (user symptom reports)
 │       │   └── env_data.py    ← GET /api/env/...       (environmental data)
 │       └── utils/
@@ -297,6 +298,9 @@ Once the backend is running, you can test these in your browser or with a tool l
 | Method | URL                              | What it does                                  |
 |--------|----------------------------------|-----------------------------------------------|
 | GET    | `/health`                        | Check if the server is running                |
+| POST   | `/api/users/me`                  | Register this device (anonymous), or refresh its last-seen time |
+| GET    | `/api/users/me`                  | Read this device's record                     |
+| DELETE | `/api/users/me`                  | Erase this participant (`?delete_reports=true` to drop the reports too) |
 | POST   | `/api/reports/`                  | Submit a symptom report                       |
 | GET    | `/api/reports/`                  | List all reports (add `?city=Athens&limit=50`)|
 | GET    | `/api/reports/heatmap`           | GeoJSON of report locations/severity (not currently used by the frontend map -- see below) |
@@ -305,12 +309,38 @@ Once the backend is running, you can test these in your browser or with a tool l
 | GET    | `/api/env/capabilities`          | Provider date-range limits (for UI date pickers) |
 | GET    | `/api/predictions/Athens`        | Latest stored AI forecast (`?start_date=&end_date=YYYY-MM-DD` optional) |
 
+The three `/api/users/me` routes and `POST /api/reports/` identify the caller
+from an `X-Device-Id` header holding a UUID v4 — there is no login, and the
+header is the only credential. See **Participant identity** below.
+
 **Example — submit a test report:**
 ```powershell
 curl -X POST http://localhost:5000/api/reports/ `
   -H "Content-Type: application/json" `
-  -d '{"user_id":"test1","lat":37.98,"lon":23.73,"symptoms":{"rhinitis":7,"asthma":3},"city":"Athens"}'
+  -H "X-Device-Id: 3f2a9c1e-7b4d-4a6f-9e21-0c8d5b1a2f30" `
+  -d '{"lat":37.98,"lon":23.73,"symptoms":{"sneezing":7,"cough":3},"city":"Athens"}'
 ```
+
+---
+
+## Participant identity
+
+The platform stores **no accounts and no personal data**. A participant is a
+device, identified by a random UUID v4 the browser generates on first visit
+and keeps in `localStorage`; it is sent in the `X-Device-Id` header on the
+requests that concern that participant's own data, and nowhere else.
+
+This is a deliberate design decision, not a shortcut. Crowdsensing needs
+*"the same participant over time"* — which an opaque identifier provides —
+and not *who* the participant is; holding no personal data keeps the dataset
+pseudonymous, makes erasure a single API call, and removes the registration
+step that suppresses participation. The cost is that the identifier is a
+bearer credential with no password behind it, which is also what makes the
+profile portable: the UI shows it as a **transfer code**, and typing it on a
+second device adopts the same profile.
+
+`backend/README.md` documents the endpoints, the validation rules and the
+erasure semantics; `frontend/README.md` documents the browser side.
 
 ---
 

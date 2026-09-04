@@ -15,6 +15,7 @@ files (nginx in Docker, or `python -m http.server` locally).
 
 | File            | Purpose                                                    |
 |------------------|--------------------------------------------------------------|
+| `identity.js`      | Anonymous device identity (UUID v4 in `localStorage`) -- load before `api.js` |
 | `api.js`          | Thin `fetch` wrapper around the backend API (single source of truth for all endpoint URLs) |
 | `map.js`           | Leaflet allergen-concentration heatmap (Leaflet.heat)          |
 | `navbar.js`         | Shared mobile nav toggle (identical include on all 3 pages)    |
@@ -29,6 +30,43 @@ file is a harmless 404, nothing breaks). Useful if your local Docker ports
 are remapped, e.g. because something else on the machine already holds 5000
 or 8080 (macOS's AirPlay Receiver commonly squats on 5000) -- see
 `docker/README.md` and `docker/docker-compose.override.yml`.
+
+## Participant identity (`js/identity.js`)
+
+There are no accounts. On first visit `identity.js` generates a UUID v4 and
+stores it under `allergymap_device_id`; that value *is* the participant. See
+`backend/README.md` for why the platform is built this way and what the
+trade-off is.
+
+Three details that are easy to get wrong:
+
+- **`crypto.randomUUID()` needs a secure context.** A deployment reached over
+  plain HTTP at an IP address does not have it, but `crypto.getRandomValues()`
+  works there, so that is the fallback -- unpredictability is the requirement,
+  since the identifier doubles as a bearer credential. A `Math.random()` path
+  exists only so an ancient browser still renders the page, and it warns.
+- **The old key is migrated, not ignored.** Before the identity layer,
+  `report.js` minted its own UUID under `allergymap_uid`. Reports already in
+  the database are attributed to that value, so `getDeviceId()` adopts it when
+  it is a valid UUID v4 -- otherwise every existing participant would look
+  like a new one after deploying this build. The old `Math.random()` fallback
+  values are not valid UUIDs and are replaced.
+- **`localStorage` can throw.** Safari private browsing denies access outright,
+  so reads and writes are wrapped and fall back to a tab-scoped identity
+  rather than breaking every request.
+
+`api.js` attaches the identifier as the `X-Device-Id` header **only** for
+calls that pass `identified: true` -- reports and `/api/users/me`. Public
+reads (environment data, forecasts, the map) go without it, so the backend
+never learns which participant is reading open data, and those requests stay
+"simple" in CORS terms instead of paying for a preflight round trip on every
+per-city fetch.
+
+`Identity.adopt(code)` switches this browser to an identifier typed by the
+participant (the profile *transfer code*); `Identity.reset()` abandons the
+current identity locally. Neither touches the server -- erasing server-side
+data is `API.eraseMe()`.
+
 
 ## Design system (`css/style.css`)
 

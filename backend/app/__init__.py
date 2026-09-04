@@ -2,6 +2,7 @@ from flask import Flask
 from flask_cors import CORS
 from .config import config_by_name
 from .extensions import mongo
+from .utils.identity import DEVICE_ID_HEADER
 import os
 
 
@@ -12,17 +13,22 @@ def create_app(config_name: str = None) -> Flask:
     app = Flask(__name__)
     app.config.from_object(config_by_name[config_name])
 
-    CORS(app)
+    # The anonymous device identity travels in a custom request header, so
+    # it has to be allowlisted explicitly: a browser will not send a custom
+    # header cross-origin unless the CORS preflight response names it.
+    CORS(app, allow_headers=["Content-Type", DEVICE_ID_HEADER])
     mongo.init_app(app)
 
     from .routes.health import bp as health_bp
     from .routes.reports import bp as reports_bp
     from .routes.env_data import bp as env_bp
     from .routes.predictions import bp as predictions_bp
+    from .routes.users import bp as users_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(reports_bp, url_prefix="/api/reports")
     app.register_blueprint(env_bp, url_prefix="/api/env")
     app.register_blueprint(predictions_bp, url_prefix="/api/predictions")
+    app.register_blueprint(users_bp, url_prefix="/api/users")
 
     return app
