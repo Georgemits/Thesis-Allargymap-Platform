@@ -28,6 +28,39 @@ function destroyForecast() {
   forecastWeatherChart?.destroy();
 }
 
+/**
+ * Chart colors.
+ *
+ * Keyed by the thing being drawn, never by position in a list: a filter that
+ * removes one pollen must not repaint the others. The six categorical hues
+ * were validated for a light chart surface -- lightness band, chroma floor,
+ * colour-vision separation (worst adjacent pair ΔE 8.2 deutan) and >= 3:1
+ * contrast against white -- so the series stay distinguishable in print, on a
+ * projector and to a colourblind reader.
+ *
+ * The old palette was pastel because the page used to be dark; on white those
+ * tones dropped below the contrast floor.
+ */
+const CHART_COLORS = {
+  grass_pollen:   "#1F6FB2",
+  olive_pollen:   "#D2620A",
+  ragweed_pollen: "#0F9D8F",
+  birch_pollen:   "#8B5CF6",
+  alder_pollen:   "#C2185B",
+  mugwort_pollen: "#5E8C1A",
+  european_aqi:   "#1F6FB2",
+  pm10:           "#D2620A",
+  pm2_5:          "#8B5CF6",
+  temperature:    "#D2620A",
+  humidity:       "#1F6FB2",
+  severity:       "#1F6FB2",
+};
+
+/** Same hue at 20% for a fill under a line. */
+function fillOf(color) {
+  return color + "33";
+}
+
 function labels(docs) {
   return docs.map((d) => new Date(d.timestamp).toLocaleDateString("el-GR"));
 }
@@ -35,16 +68,16 @@ function labels(docs) {
 function buildPollenChart(docs) {
   const ctx = document.getElementById("pollenChart");
   const pollenTypes = ["grass_pollen", "olive_pollen", "ragweed_pollen", "birch_pollen", "alder_pollen", "mugwort_pollen"];
-  const colors = ["#43a047", "#8d6e63", "#ef9a9a", "#90caf9", "#ffe082", "#ce93d8"];
+
   pollenChart = new Chart(ctx, {
     type: "line",
     data: {
       labels: labels(docs),
-      datasets: pollenTypes.map((key, i) => ({
+      datasets: pollenTypes.map((key) => ({
         label: key.replace("_pollen", "").replace("_", " "),
         data: docs.map((d) => d.pollen?.[key] ?? null),
-        borderColor: colors[i],
-        backgroundColor: colors[i] + "33",
+        borderColor: CHART_COLORS[key],
+        backgroundColor: fillOf(CHART_COLORS[key]),
         tension: 0.3,
         fill: false,
         spanGaps: true,
@@ -61,9 +94,9 @@ function buildAqiChart(docs) {
     data: {
       labels: labels(docs),
       datasets: [
-        { label: "European AQI", data: docs.map((d) => d.air_quality?.european_aqi ?? null), backgroundColor: "#42a5f5" },
-        { label: "PM10", data: docs.map((d) => d.air_quality?.pm10 ?? null), backgroundColor: "#ef9a9a" },
-        { label: "PM2.5", data: docs.map((d) => d.air_quality?.pm2_5 ?? null), backgroundColor: "#ce93d8" },
+        { label: "European AQI", data: docs.map((d) => d.air_quality?.european_aqi ?? null), backgroundColor: CHART_COLORS.european_aqi },
+        { label: "PM10", data: docs.map((d) => d.air_quality?.pm10 ?? null), backgroundColor: CHART_COLORS.pm10 },
+        { label: "PM2.5", data: docs.map((d) => d.air_quality?.pm2_5 ?? null), backgroundColor: CHART_COLORS.pm2_5 },
       ],
     },
     options: { responsive: true, plugins: { legend: { position: "bottom" } } },
@@ -80,13 +113,13 @@ function buildWeatherChart(docs) {
         {
           label: "Temperature (°C)",
           data: docs.map((d) => d.weather?.temperature_2m ?? null),
-          borderColor: "#ef5350", backgroundColor: "#ef535033",
+          borderColor: CHART_COLORS.temperature, backgroundColor: fillOf(CHART_COLORS.temperature),
           yAxisID: "yTemp", tension: 0.3, fill: false, spanGaps: true,
         },
         {
           label: "Humidity (%)",
           data: docs.map((d) => d.weather?.relative_humidity_2m ?? null),
-          borderColor: "#29b6f6", backgroundColor: "#29b6f633",
+          borderColor: CHART_COLORS.humidity, backgroundColor: fillOf(CHART_COLORS.humidity),
           yAxisID: "yHum", tension: 0.3, fill: false, spanGaps: true,
         },
       ],
@@ -122,7 +155,7 @@ async function buildSeverityChart(city) {
       type: "bar",
       data: {
         labels: days,
-        datasets: [{ label: "Avg Severity", data: avgs, backgroundColor: "#66bb6a" }],
+        datasets: [{ label: "Avg Severity", data: avgs, backgroundColor: CHART_COLORS.severity }],
       },
       options: {
         responsive: true,
@@ -247,7 +280,7 @@ function buildForecastPollenChart(variables) {
   const ctx = document.getElementById("forecastPollenChart");
 
   const datasets = [];
-  const palettePollen = { grass_pollen: "#43a047", olive_pollen: "#8d6e63" };
+  const palettePollen = CHART_COLORS;  // one source of truth, keyed by pollen
 
   for (const [varName, color] of Object.entries(palettePollen)) {
     const series = variables[varName];
@@ -306,7 +339,7 @@ function buildForecastWeatherChart(variables) {
     datasets.push({
       label: "Temperature (°C)",
       data: tempSeries.map((f) => ({ x: f.forecast_timestamp, y: f.predicted_value })),
-      borderColor: "#ef5350", backgroundColor: "#ef535033",
+      borderColor: CHART_COLORS.temperature, backgroundColor: fillOf(CHART_COLORS.temperature),
       yAxisID: "yTemp", tension: 0.3, fill: false, pointRadius: 0,
     });
   }
@@ -314,7 +347,7 @@ function buildForecastWeatherChart(variables) {
     datasets.push({
       label: "Humidity (%)",
       data: humSeries.map((f) => ({ x: f.forecast_timestamp, y: f.predicted_value })),
-      borderColor: "#29b6f6", backgroundColor: "#29b6f633",
+      borderColor: CHART_COLORS.humidity, backgroundColor: fillOf(CHART_COLORS.humidity),
       yAxisID: "yHum", tension: 0.3, fill: false, pointRadius: 0,
     });
   }

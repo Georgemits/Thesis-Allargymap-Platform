@@ -25,6 +25,11 @@ db.createCollection("users");
 db.users.createIndex({ device_id: 1 }, { unique: true });
 db.users.createIndex({ last_seen_at: -1 });
 
+// Accounts are optional, so this index must be sparse as well as unique: a
+// plain unique index treats every account-less document as sharing the value
+// null, and the second anonymous participant would be rejected outright.
+db.users.createIndex({ username: 1 }, { unique: true, sparse: true });
+
 // ── Collection: allergy_profiles ──────────────────────────────────────────
 // One allergy profile per device, kept out of the users document so it can be
 // replaced or erased on its own.

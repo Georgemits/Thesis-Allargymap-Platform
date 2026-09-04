@@ -24,11 +24,17 @@ def create_app(config_name: str = None) -> Flask:
     from .routes.env_data import bp as env_bp
     from .routes.predictions import bp as predictions_bp
     from .routes.users import bp as users_bp
+    from .routes.profiles import bp as profiles_bp
+    from .routes.auth import bp as auth_bp
+    from .routes.correlations import bp as correlations_bp
 
     app.register_blueprint(health_bp)
     app.register_blueprint(reports_bp, url_prefix="/api/reports")
     app.register_blueprint(env_bp, url_prefix="/api/env")
     app.register_blueprint(predictions_bp, url_prefix="/api/predictions")
     app.register_blueprint(users_bp, url_prefix="/api/users")
+    app.register_blueprint(profiles_bp, url_prefix="/api/profiles")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(correlations_bp, url_prefix="/api/correlations")
 
     return app

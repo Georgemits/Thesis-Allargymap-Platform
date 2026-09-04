@@ -1,5 +1,5 @@
 /**
- * navbar.js — shared mobile nav toggle.
+ * navbar.js — shared mobile nav toggle + account label.
  * Included identically on index.html, report.html, and dashboard.html,
  * alongside the identical <nav class="navbar"> markup block those pages
  * share (see frontend/README.md) and the single .navbar style block in
@@ -22,4 +22,16 @@ document.addEventListener("DOMContentLoaded", () => {
       toggle.setAttribute("aria-expanded", "false");
     });
   });
+});
+
+// Show the signed-in username in place of "Sign in". Read from the local
+// cache rather than the API: this runs on every page, and an identified
+// request per page load would tell the backend which participant is reading
+// the public map. login.html asks the server for the authoritative answer.
+document.addEventListener("DOMContentLoaded", () => {
+  const account = document.getElementById("navAccount");
+  if (!account || typeof Identity === "undefined") return;
+
+  const username = Identity.getUsername();
+  if (username) account.textContent = username;
 });

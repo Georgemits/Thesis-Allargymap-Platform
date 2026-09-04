@@ -39,7 +39,11 @@ const ALLERGENS = {
 };
 
 const HISTORY_DAYS = 7;
-const HEAT_GRADIENT = { 0.4: "#2563eb", 0.6: "#0ea5e9", 0.75: "#22d3ee", 0.9: "#facc15", 1.0: "#ef4444" };
+// Concentration is a magnitude, so the ramp is a single hue running light to
+// dark -- the brand blue, deepening with the reading. The previous
+// blue-cyan-yellow-red rainbow implied categories that do not exist and left
+// colourblind readers unable to order the middle of the scale.
+const HEAT_GRADIENT = { 0.2: "#cfe2f3", 0.4: "#8dbde4", 0.6: "#4a90cc", 0.8: "#1F6FB2", 1.0: "#004380" };
 
 let heatLayer = null;
 // { cityName: { coords: [lon, lat], docs: [envSnapshot, ...] (ascending by timestamp) } }

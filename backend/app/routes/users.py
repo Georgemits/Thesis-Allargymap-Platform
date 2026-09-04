@@ -20,24 +20,25 @@ ever speak about "me".
 from flask import Blueprint, g, jsonify, request
 
 from ..extensions import mongo
-from ..models.user import build_upsert
+from ..models.allergy_profile import COLLECTION_NAME as PROFILE_COLLECTION
+from ..models.user import build_upsert, public_user
 from ..utils.identity import require_device_id
 from ..utils.serialization import serialize_doc
 
 bp = Blueprint("users", __name__)
 
-#: Collection holding the participant's allergy profile, keyed by the same
-#: device_id. Named here so that erasure covers it.
-PROFILE_COLLECTION = "allergy_profiles"
-
 #: Datetime fields on a users document, for JSON rendering with an explicit
 #: UTC offset (see app.utils.serialization).
-USER_DATETIME_FIELDS = ("created_at", "last_seen_at")
+USER_DATETIME_FIELDS = ("created_at", "last_seen_at", "account_created_at")
 
 
 def _serialize(doc: dict) -> dict:
-    """Make a users document JSON-safe, timestamps in explicit UTC."""
-    return serialize_doc(doc, datetime_fields=USER_DATETIME_FIELDS)
+    """Render a users document for a response: public fields only, UTC stamps.
+
+    `public_user` is what keeps `password_hash` out of every response that
+    touches this collection -- see app/models/user.py.
+    """
+    return serialize_doc(public_user(doc), datetime_fields=USER_DATETIME_FIELDS)
 
 
 @bp.post("/me")

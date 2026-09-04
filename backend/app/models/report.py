@@ -34,17 +34,28 @@ from datetime import datetime, timezone
 
 VAS_MAX = 10  # symptom slider scale: 0 (none) .. VAS_MAX (severe)
 
+#: The symptoms a participant rates, in the order the form presents them.
+#: Defined once here because the correlation engine iterates the same list --
+#: a second copy would eventually disagree with the documents in the database.
+VAS_FIELDS = (
+    "sneezing",
+    "runny_nose",
+    "itchy_eyes",
+    "cough",
+    "skin_rash",
+    "wheezing",
+)
+
 
 def build_report(user_id: str, lon: float, lat: float, symptoms: dict,
                  city: str = "", notes: str = "") -> dict:
     """Return a validated report document ready for insertion."""
-    vas_fields = ["sneezing", "runny_nose", "itchy_eyes", "cough", "skin_rash", "wheezing"]
     clean_symptoms = {}
-    for field in vas_fields:
+    for field in VAS_FIELDS:
         val = symptoms.get(field, 0)
         clean_symptoms[field] = max(0, min(VAS_MAX, int(val)))
 
-    overall = round(sum(clean_symptoms.values()) / len(vas_fields))
+    overall = round(sum(clean_symptoms.values()) / len(VAS_FIELDS))
 
     return {
         "user_id": str(user_id),

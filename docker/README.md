@@ -24,7 +24,7 @@ upsert idempotent:
 
 ```bash
 docker compose exec mongo mongosh allergymap --quiet --eval \
-  'db.users.createIndex({device_id:1},{unique:true}); db.allergy_profiles.createIndex({device_id:1},{unique:true})'
+  'db.users.createIndex({device_id:1},{unique:true}); db.users.createIndex({username:1},{unique:true,sparse:true}); db.allergy_profiles.createIndex({device_id:1},{unique:true})'
 ```
 
 A fresh clone needs none of this.

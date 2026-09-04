@@ -65,6 +65,7 @@ Thesis-Allargymap-Platform/
 │       ├── routes/
 │       │   ├── health.py      ← GET /health  (just checks the server is alive)
 │       │   ├── users.py       ← POST/GET/DELETE /api/users/me (anonymous identity)
+│       │   ├── correlations.py ← GET /api/correlations   (symptoms vs environment)
 │       │   ├── reports.py     ← POST/GET /api/reports  (user symptom reports)
 │       │   └── env_data.py    ← GET /api/env/...       (environmental data)
 │       └── utils/
@@ -298,6 +299,13 @@ Once the backend is running, you can test these in your browser or with a tool l
 | Method | URL                              | What it does                                  |
 |--------|----------------------------------|-----------------------------------------------|
 | GET    | `/health`                        | Check if the server is running                |
+| POST   | `/api/auth/register`             | Create an account for this device (username + password) |
+| POST   | `/api/auth/login`                | Sign in; returns the device id to use from then on |
+| GET    | `/api/auth/status`               | Does this device have an account?             |
+| GET    | `/api/profiles/allergens`        | The allergens a participant can declare + the severity scale |
+| GET    | `/api/profiles/me`               | This participant's allergy profile            |
+| PUT    | `/api/profiles/me`               | Create or replace it                          |
+| DELETE | `/api/profiles/me`               | Delete it, keeping the participant            |
 | POST   | `/api/users/me`                  | Register this device (anonymous), or refresh its last-seen time |
 | GET    | `/api/users/me`                  | Read this device's record                     |
 | DELETE | `/api/users/me`                  | Erase this participant (`?delete_reports=true` to drop the reports too) |
@@ -308,6 +316,10 @@ Once the backend is running, you can test these in your browser or with a tool l
 | GET    | `/api/env/city/Athens`           | Time series for Athens (`?days=7`, or `?start_date=&end_date=YYYY-MM-DD`) |
 | GET    | `/api/env/capabilities`          | Provider date-range limits (for UI date pickers) |
 | GET    | `/api/predictions/Athens`        | Latest stored AI forecast (`?start_date=&end_date=YYYY-MM-DD` optional) |
+| GET    | `/api/correlations`              | Symptoms vs environment: every variable against one symptom |
+| GET    | `/api/correlations/lags`         | The same analysis at 0/3/6/12/24-hour exposure lags |
+| GET    | `/api/correlations/combinations` | Mean severity per allergen band × temperature or humidity band |
+| GET    | `/api/correlations/me`           | Restricted to the allergens this participant declared |
 
 The three `/api/users/me` routes and `POST /api/reports/` identify the caller
 from an `X-Device-Id` header holding a UUID v4 — there is no login, and the
@@ -338,6 +350,14 @@ step that suppresses participation. The cost is that the identifier is a
 bearer credential with no password behind it, which is also what makes the
 profile portable: the UI shows it as a **transfer code**, and typing it on a
 second device adopts the same profile.
+
+**Accounts are optional and sit on top of this.** Creating one (username and
+password — no e-mail address) attaches it to the identity the browser already
+has, so nothing contributed anonymously is lost, and signing in on another
+device hands that device the same identifier. It is a way to *recover* an
+identity, not a second notion of who someone is: the device id still authorises
+every request. There is no mail server behind the platform, so a forgotten
+password cannot be reset — which is exactly why the transfer code still exists.
 
 `backend/README.md` documents the endpoints, the validation rules and the
 erasure semantics; `frontend/README.md` documents the browser side.

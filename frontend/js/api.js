@@ -66,6 +66,54 @@ const API = (() => {
         identified: true,
       }),
 
+    /**
+     * Create an account for THIS device, keeping everything it has contributed
+     * anonymously so far.
+     * @returns {Promise<{user: Object}>}
+     */
+    register: (username, password) =>
+      request("/api/auth/register", {
+        method: "POST",
+        identified: true,
+        body: JSON.stringify({ username, password }),
+      }),
+
+    /**
+     * Sign in. Deliberately unidentified — the point is to work from a browser
+     * whose own identity is useless. The returned `device_id` becomes this
+     * browser's identity (pass it to `Identity.signIn`).
+     * @returns {Promise<{device_id: string, user: Object}>}
+     */
+    login: (username, password) =>
+      request("/api/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ username, password }),
+      }),
+
+    /** Whether this device carries an account. @returns {Promise<{signed_in: boolean, username: ?string}>} */
+    authStatus: () => request("/api/auth/status", { identified: true }),
+
+    /** The allergen catalogue + severity scale. Public — no identity sent. */
+    getAllergens: () => request("/api/profiles/allergens"),
+
+    /** Read this device's allergy profile. Rejects with `status` 404 when none saved yet. */
+    getProfile: () => request("/api/profiles/me", { identified: true }),
+
+    /**
+     * Create or replace this device's allergy profile.
+     * @param {Object<string, number>} allergens allergen key -> severity 0-3
+     */
+    saveProfile: (allergens) =>
+      request("/api/profiles/me", {
+        method: "PUT",
+        identified: true,
+        body: JSON.stringify({ allergens }),
+      }),
+
+    /** Delete the allergy profile, keeping the participant and their reports. */
+    deleteProfile: () =>
+      request("/api/profiles/me", { method: "DELETE", identified: true }),
+
     /** Fetch latest env snapshot per city. */
     getLatestEnv: () =>
       request("/api/env/latest"),

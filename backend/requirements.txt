@@ -1,4 +1,7 @@
 flask==3.1.0
+# Pinned explicitly although Flask pulls it in anyway: app/routes/auth.py
+# imports werkzeug.security directly for password hashing (scrypt).
+werkzeug==3.1.8
 flask-pymongo==2.3.0
 flask-cors==5.0.0
 pymongo==4.10.1

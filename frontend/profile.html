@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AllergyMap — My Allergy Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@500;600&family=Montserrat:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <nav class="navbar">
+    <span class="brand">AllergyMap</span>
+    <button class="navbar-toggle" aria-label="Toggle navigation" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="navbar-links">
+      <a href="index.html">Map</a>
+      <a href="report.html">Report Symptoms</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="profile.html" class="active">My Profile</a>
+      <a href="login.html" id="navAccount">Sign in</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <h1>My Allergy Profile</h1>
+    <p class="hint">
+      Tell AllergyMap what you react to and how badly. Your answers are matched
+      against the pollen, dust and weather measured where you are, so alerts and
+      risk scores describe your day rather than an average person's.
+    </p>
+
+    <!-- ── Allergens ───────────────────────────────────────────────────── -->
+    <section class="card">
+      <h2>What affects you</h2>
+
+      <div id="profileLoading" class="info-box">Loading allergens…</div>
+      <div id="profileError" class="info-box error hidden"></div>
+
+      <form id="profileForm" class="hidden">
+        <div id="allergenGroups"></div>
+        <div class="button-row">
+          <button type="submit" class="btn-primary">Save profile</button>
+          <span id="profileUpdated" class="allergen-season"></span>
+        </div>
+        <div id="profileMsg" class="form-msg hidden"></div>
+      </form>
+    </section>
+
+    <!-- ── Keeping this profile ────────────────────────────────────────── -->
+    <section class="card">
+      <h2>Keeping this profile</h2>
+
+      <div id="accountState" class="info-box">
+        Checking whether this browser has an account…
+      </div>
+
+      <p class="hint">
+        Your transfer code is the identity this browser uses. Type it on another
+        device to open the same profile there. Anyone who has it can read and
+        change this profile, so treat it like a password.
+      </p>
+      <div id="transferCode" class="code-box">…</div>
+      <div class="button-row">
+        <button type="button" id="copyCodeBtn" class="btn-secondary">Copy code</button>
+      </div>
+      <div id="copyMsg" class="form-msg hidden"></div>
+
+      <h3 style="margin-top: 2rem;">Open a profile from another device</h3>
+      <form id="adoptForm" class="inline-form">
+        <label class="hidden" for="adoptCode">Transfer code</label>
+        <input type="text" id="adoptCode" class="mono" placeholder="paste a transfer code"
+               autocapitalize="none" spellcheck="false" required />
+        <button type="submit" class="btn-secondary">Use this code</button>
+      </form>
+      <div id="adoptMsg" class="form-msg hidden"></div>
+    </section>
+
+    <!-- ── Erasure ─────────────────────────────────────────────────────── -->
+    <section class="card danger-zone">
+      <h2>Delete my data</h2>
+      <p class="hint">
+        Deleting the profile keeps your symptom reports. Erasing everything also
+        removes this identity and unlinks every report you have submitted — the
+        readings stay in the research dataset, but nothing connects them to you
+        any more. Neither can be undone.
+      </p>
+      <div class="button-row">
+        <button type="button" id="deleteProfileBtn" class="btn-danger">Delete my allergy profile</button>
+        <button type="button" id="eraseAllBtn" class="btn-danger">Erase everything</button>
+      </div>
+      <div id="eraseMsg" class="form-msg hidden"></div>
+    </section>
+  </main>
+
+  <script src="js/navbar.js"></script>
+  <script src="env.local.js"></script><!-- optional, gitignored: local API base override -->
+  <script src="js/identity.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/profile.js"></script>
+</body>
+</html>

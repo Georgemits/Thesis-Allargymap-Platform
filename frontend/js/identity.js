@@ -11,11 +11,22 @@
  * *transfer code*: typing it on a second device adopts the same profile. The
  * profile page surfaces it under that name.
  *
+ * An optional account (username + password) sits on top of this: signing in
+ * hands the browser the identifier belonging to that account, and signing out
+ * throws it away and generates a fresh anonymous one. The account is a way to
+ * recover an identity, never a second notion of "who" -- see
+ * backend/app/routes/auth.py.
+ *
  * Load this file before api.js. It must not depend on api.js, so that a page
  * can establish an identity even if the backend is unreachable.
  */
 const Identity = (() => {
   const STORAGE_KEY = "allergymap_device_id";
+
+  // The signed-in username, cached locally purely so the navbar can render it
+  // without a request on every page load. The server remains the authority --
+  // `API.authStatus()` is what the account pages ask.
+  const USERNAME_KEY = "allergymap_username";
 
   // Pre-identity-layer key: report.js used to mint its own UUID here. Reports
   // already in the database are attributed to that value, so it is migrated
@@ -30,6 +41,7 @@ const Identity = (() => {
   // on access). The identity then lasts for the tab, which keeps the app
   // working instead of failing every request.
   let memoryFallback = null;
+  let memoryUsername = "";
 
   /** Trim and lower-case a candidate identifier. */
   function normalize(value) {
@@ -147,5 +159,85 @@ const Identity = (() => {
     return writeStored(generate());
   }
 
-  return { getDeviceId, adopt, reset, isValid, normalize, STORAGE_KEY };
+  /**
+   * Adopt the identity of an account after a successful sign-in.
+   *
+   * @param {string} deviceId identifier returned by `API.login()`
+   * @param {string} username for display only
+   * @returns {string} the adopted identifier
+   * @throws {Error} if the server returned something that is not a valid id
+   */
+  function signIn(deviceId, username) {
+    const adopted = adopt(deviceId);
+    memoryUsername = String(username || "");
+    try {
+      localStorage.setItem(USERNAME_KEY, memoryUsername);
+    } catch (err) {
+      /* tab-scoped fallback, same as the identifier itself */
+    }
+    return adopted;
+  }
+
+  /**
+   * Forget the account and start a fresh anonymous identity.
+   *
+   * Nothing is deleted server-side: the account and its data stay, and signing
+   * in again brings them back. This is only "stop using it on this browser",
+   * which is what matters on a shared computer.
+   *
+   * @returns {string} the new anonymous identifier
+   */
+  function signOut() {
+    memoryUsername = "";
+    try {
+      localStorage.removeItem(USERNAME_KEY);
+    } catch (err) {
+      /* nothing stored to remove */
+    }
+    return reset();
+  }
+
+  /**
+   * Forget the cached username without touching the identity.
+   *
+   * For the case where the local cache claims an account the server does not
+   * recognise -- erased from another device, or left behind after adopting a
+   * transfer code. `signOut` would be wrong here: it also mints a new device
+   * id, throwing away the identity (and the data behind it) over what is only
+   * a stale label.
+   */
+  function forgetUsername() {
+    memoryUsername = "";
+    try {
+      localStorage.removeItem(USERNAME_KEY);
+    } catch (err) {
+      /* nothing stored to remove */
+    }
+  }
+
+  /** @returns {string|null} the signed-in username, or null when anonymous. */
+  function getUsername() {
+    let stored = null;
+    try {
+      stored = localStorage.getItem(USERNAME_KEY);
+    } catch (err) {
+      stored = memoryUsername;
+    }
+    const name = (stored || memoryUsername || "").trim();
+    return name === "" ? null : name;
+  }
+
+  return {
+    getDeviceId,
+    adopt,
+    reset,
+    signIn,
+    signOut,
+    forgetUsername,
+    getUsername,
+    isValid,
+    normalize,
+    STORAGE_KEY,
+    USERNAME_KEY,
+  };
 })();

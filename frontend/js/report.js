@@ -38,11 +38,11 @@ if (navigator.geolocation) {
       latInput.value = pos.coords.latitude.toFixed(6);
       lonInput.value = pos.coords.longitude.toFixed(6);
       statusEl.textContent = `Location set: ${latInput.value}, ${lonInput.value}`;
-      statusEl.style.borderColor = "#43a047";
+      statusEl.classList.add("success");
     },
     () => {
       statusEl.textContent = "Could not detect location. Please enter city manually.";
-      statusEl.style.borderColor = "#fb8c00";
+      statusEl.classList.add("warn-box");
     }
   );
 } else {

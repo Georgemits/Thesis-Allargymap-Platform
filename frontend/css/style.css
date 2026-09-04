@@ -1,45 +1,64 @@
 /* ─────────────────────────────────────────────────────────────────────────
    AllergyMap — clinical theme
 
-   Palette chosen and WCAG 2.1 AA contrast-checked (relative-luminance
-   formula, see docs/ note in README) for every text/background pairing
-   actually used below. Do not swap a color in isolation without
-   re-checking contrast -- ratios are noted next to each variable.
+   Visual language follows the Greek diagnostic-laboratory convention, taken
+   from how bioiatriki.gr presents itself: a deep institutional blue used for
+   navigation and headings, white cards on a near-white page, warm grey body
+   text rather than black, soft shadows, rounded corners and pill buttons.
+   Colors and metrics were measured from that site's computed styles; nothing
+   of theirs is reproduced -- no logo, no wordmark, no imagery -- because this
+   is an unaffiliated university project that should look like it belongs in
+   the same profession, not like it belongs to that company.
+
+   Every text/background pairing below was contrast-checked against WCAG 2.1
+   (relative-luminance formula); the ratio is noted beside each variable. Note
+   that the source site's own secondary grey (#777) reaches only 4.48:1 on
+   white and would fail AA for body text -- ours is darkened to #5f6b76.
+   Do not swap a color in isolation without re-checking.
    ───────────────────────────────────────────────────────────────────────── */
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  /* Backgrounds -- deep clinical navy, three elevations */
-  --bg-canvas:    #0a1929;   /* page background */
-  --bg-surface:   #0f2438;   /* cards */
-  --bg-elevated:  #14304a;   /* navbar, hovers, inputs */
+  /* Backgrounds -- white cards floating on a faintly blue-grey page */
+  --bg-canvas:    #f2f5f8;   /* page background */
+  --bg-surface:   #ffffff;   /* cards */
+  --bg-elevated:  #e9eef3;   /* inputs, hovers, chips */
 
-  /* Text -- white/near-white on dark, per the brief */
-  --text-primary:   #eef4f9;  /* 16.0:1 on canvas, 14.3:1 on surface */
-  --text-secondary: #a9c0d1;  /* 9.4:1 on canvas, 8.4:1 on surface -- muted but still AA */
-  --text-on-accent: #0a1929;  /* dark navy text ON the bright teal accent (9.5:1) --
-                                  white-on-teal fails contrast (1.9:1), so buttons use this */
+  /* Text -- warm grey, not black, as clinical sites tend to set it */
+  --text-primary:   #545454;  /* 7.6:1 on white, 6.9:1 on canvas */
+  --text-secondary: #5f6b76;  /* 5.6:1 on white, 5.0:1 on canvas */
+  --text-on-accent: #ffffff;  /* white ON the brand blue (9.9:1) */
 
-  /* Accent -- clinical teal */
-  --accent:       #2dd4bf;   /* 9.5:1 on canvas -- primary actions, links, focus rings */
-  --accent-dark:  #0f766e;   /* borders, subtle fills */
+  /* Brand -- institutional medical blue */
+  --accent:       #004380;   /* 9.9:1 on white -- navbar, buttons, links, focus */
+  --accent-dark:  #003462;   /* hover and borders */
+  --accent-tint:  #e6eef5;   /* selected rows, subtle fills */
 
-  /* Status -- bright variant for icons/text, -dark variant for filled badge backgrounds */
-  --danger:       #f87171;  --danger-dark:  #7f1d1d;
-  --warn:         #fbbf24;  --warn-dark:    #78350f;
-  --success:      #34d399;  --success-dark: #065f46;
+  /* Status -- `-ink` is the text/border tone, `-tint` the filled background.
+     On a light theme a status badge is a pale wash with dark text, the
+     inverse of how a dark theme has to do it. */
+  --danger:       #b3261e;  --danger-tint:  #fbeaea;   /* 5.6:1 ink on tint */
+  --warn:         #8a5300;  --warn-tint:    #fdf3e2;   /* 5.8:1 */
+  --success:      #157a45;  --success-tint: #e7f4ec;   /* 4.8:1 */
 
-  --border:      rgba(255, 255, 255, 0.12);
-  --border-firm: rgba(255, 255, 255, 0.22);
-  --radius-sm: 4px;
-  --radius:    6px;
-  --shadow:    0 2px 6px rgba(0, 0, 0, 0.3);
+  --border:      #dbe3ea;
+  --border-firm: #c3cfda;
+  --radius-sm: 6px;
+  --radius:    10px;         /* the card radius used across the reference site */
+  --radius-pill: 999px;      /* its buttons are fully rounded */
+  --shadow:    0 3px 6px -4px rgba(0, 0, 0, .16), 0 3px 6px rgba(0, 0, 0, .12);
+  --shadow-lifted: 0 6px 16px -6px rgba(0, 67, 128, .25);
 
-  /* Type -- IBM Plex Sans for text, IBM Plex Mono for readings/data
-     (a report full of numbers reads better set in a tabular monospace
-     than jammed into the body typeface). */
-  --font-sans: "IBM Plex Sans", "Segoe UI", sans-serif;
+  --navbar-height: 64px;
+
+  /* Type -- Montserrat is the closest freely licensed geometric sans to the
+     reference site's Gotham, and unlike most alternatives it ships a Greek
+     subset, which this project needs. IBM Plex Mono stays for anything that
+     is a reading rather than prose (symptom scores, transfer codes, map
+     legend values) -- a figure set in a tabular monospace is easier to
+     compare than one jammed into the body face. */
+  --font-sans: "Montserrat", "Segoe UI", Arial, sans-serif;
   --font-mono: "IBM Plex Mono", "SFMono-Regular", Consolas, monospace;
 
   --font-xs:   0.8rem;
@@ -81,12 +100,13 @@ a { color: var(--accent); }
    + this one style block + js/navbar.js for the mobile toggle behavior.
    ───────────────────────────────────────────────────────────────────────── */
 .navbar {
-  background: var(--bg-elevated);
-  border-bottom: 1px solid var(--border);
-  color: var(--text-primary);
+  background: var(--accent);
+  border-bottom: none;
+  box-shadow: 0 2px 8px rgba(0, 67, 128, .18);
+  color: var(--text-on-accent);
   display: flex;
   align-items: stretch;
-  height: 52px;
+  height: var(--navbar-height);
   gap: var(--space-3);
   padding: 0 var(--space-4);
   position: sticky; top: 0; z-index: 1000;
@@ -96,19 +116,23 @@ a { color: var(--accent); }
   margin-right: auto; display: flex; align-items: center; gap: .5rem;
   align-self: center;
 }
-.navbar .brand::before { content: ""; width: 7px; height: 7px; background: var(--accent); flex-shrink: 0; }
+.navbar .brand { color: var(--text-on-accent); }
+.navbar .brand::before {
+  content: ""; width: 9px; height: 9px; border-radius: 50%;
+  background: var(--text-on-accent); flex-shrink: 0;
+}
 
 .navbar-links { display: flex; align-items: stretch; gap: var(--space-1); }
 .navbar a {
-  color: var(--text-secondary); text-decoration: none;
+  color: rgba(255, 255, 255, .85); text-decoration: none;
   font-size: var(--font-sm); letter-spacing: .02em;
   display: flex; align-items: center;
-  padding: 0 .8rem; border-top: 2px solid transparent;
+  padding: 0 .8rem; border-bottom: 3px solid transparent;
   transition: color .15s, border-color .15s;
 }
-.navbar a:hover { color: var(--text-primary); }
-.navbar a.active { color: var(--text-primary); border-top-color: var(--accent); font-weight: 600; }
-.navbar a:focus-visible { outline: 1px solid var(--accent); outline-offset: -2px; }
+.navbar a:hover { color: #ffffff; }
+.navbar a.active { color: #ffffff; border-bottom-color: #ffffff; font-weight: 700; }
+.navbar a:focus-visible { outline: 2px solid #ffffff; outline-offset: -4px; }
 
 /* Mobile hamburger toggle -- hidden on desktop, shown under the breakpoint below */
 .navbar-toggle {
@@ -118,8 +142,8 @@ a { color: var(--accent); }
   background: none; border: none; cursor: pointer;
   align-self: center;
 }
-.navbar-toggle span { display: block; height: 2px; background: var(--text-primary); border-radius: 1px; }
-.navbar-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+.navbar-toggle span { display: block; height: 2px; background: var(--text-on-accent); border-radius: 1px; }
+.navbar-toggle:focus-visible { outline: 2px solid #ffffff; outline-offset: 4px; }
 
 @media (max-width: 720px) {
   .navbar-toggle { display: flex; }
@@ -127,7 +151,7 @@ a { color: var(--accent); }
     display: none;
     position: absolute; top: 100%; left: 0; right: 0;
     flex-direction: column; align-items: stretch;
-    background: var(--bg-elevated); border-bottom: 1px solid var(--border);
+    background: var(--accent); border-bottom: none;
     padding: var(--space-2) var(--space-4) var(--space-3);
     gap: var(--space-1);
     box-shadow: var(--shadow);
@@ -137,7 +161,7 @@ a { color: var(--accent); }
 }
 
 /* ─── Map Page ───────────────────────────────────────────────────────────── */
-#map { height: calc(100vh - 53px); width: 100%; }
+#map { height: calc(100vh - var(--navbar-height)); width: 100%; }
 
 .legend {
   position: fixed; bottom: var(--space-4); right: var(--space-3);
@@ -175,7 +199,7 @@ a { color: var(--accent); }
 
 /* ─── Container ──────────────────────────────────────────────────────────── */
 .container { max-width: 1000px; margin: var(--space-4) auto; padding: 0 var(--space-3); }
-.container h1 { margin-bottom: var(--space-1); color: var(--text-primary); font-size: var(--font-2xl); font-weight: 700; }
+.container h1 { margin-bottom: var(--space-1); color: var(--accent); font-size: var(--font-2xl); font-weight: 700; letter-spacing: -.01em; }
 .hint { color: var(--text-secondary); margin-bottom: var(--space-4); font-size: var(--font-sm); }
 
 /* ─── Report Form ────────────────────────────────────────────────────────── */
@@ -188,7 +212,7 @@ a { color: var(--accent); }
 .form-group { margin-bottom: var(--space-3); display: flex; flex-direction: column; gap: .4rem; }
 .form-group label { font-weight: 600; font-size: var(--font-sm); color: var(--text-primary); }
 .form-group input, .form-group textarea {
-  background: var(--bg-elevated); color: var(--text-primary);
+  background: var(--bg-surface); color: var(--text-primary);
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: .6rem .85rem; font-size: var(--font-base);
   transition: border-color .2s, box-shadow .2s;
@@ -227,30 +251,31 @@ legend {
 
 .btn-primary {
   background: var(--accent); color: var(--text-on-accent);
-  border: none; border-radius: var(--radius);
-  padding: .65rem 1.5rem; font-size: var(--font-base); font-weight: 600; cursor: pointer;
+  border: none; border-radius: var(--radius-pill);
+  padding: .65rem 1.75rem; font-size: var(--font-base); font-weight: 600; cursor: pointer;
   transition: background .2s, transform .05s;
 }
-.btn-primary:hover { background: #5eead4; }
+.btn-primary:hover { background: var(--accent-dark); box-shadow: var(--shadow-lifted); }
 .btn-primary:active { transform: translateY(1px); }
-.btn-primary:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+.btn-primary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 .btn-primary:disabled { background: var(--text-secondary); color: var(--bg-canvas); cursor: not-allowed; }
 
 .btn-secondary {
   background: transparent; color: var(--accent);
-  border: 1px solid var(--accent-dark); border-radius: var(--radius);
-  padding: .6rem 1.4rem; font-size: var(--font-sm); cursor: pointer;
+  border: 1px solid var(--accent); border-radius: var(--radius-pill);
+  padding: .6rem 1.6rem; font-weight: 600; font-size: var(--font-sm); cursor: pointer;
   transition: background .2s, border-color .2s;
 }
-.btn-secondary:hover { background: rgba(45, 212, 191, .1); border-color: var(--accent); }
+.btn-secondary:hover { background: var(--accent-tint); border-color: var(--accent-dark); }
 
 .form-msg { margin-top: var(--space-2); padding: .65rem 1rem; border-radius: var(--radius); font-size: var(--font-sm); }
-.form-msg.success { background: var(--success-dark); color: var(--text-primary); }
-.form-msg.error   { background: var(--danger-dark);  color: var(--text-primary); }
+.form-msg.success { background: var(--success-tint); color: var(--success); border: 1px solid var(--success); }
+.form-msg.error   { background: var(--danger-tint);  color: var(--danger);  border: 1px solid var(--danger); }
 .hidden { display: none; }
 
 /* ─── Info-box error variant ─────────────────────────────────────────────── */
-.info-box.error { background: var(--danger-dark); border-left-color: var(--danger); color: var(--text-primary); }
+.info-box.error   { background: var(--danger-tint);  border-left-color: var(--danger);  color: var(--danger); }
+.info-box.success { background: var(--success-tint); border-left-color: var(--success); color: var(--success); }
 
 /* ─── Dashboard ──────────────────────────────────────────────────────────── */
 .controls { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-1); }
@@ -259,7 +284,7 @@ legend {
   background: var(--bg-elevated); color: var(--text-primary);
   border: 1px solid var(--border); border-radius: var(--radius);
   padding: .4rem .7rem; font-size: var(--font-sm);
-  color-scheme: dark;
+  color-scheme: light;
 }
 .controls select:focus, .controls input[type="date"]:focus {
   outline: none; border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent);
@@ -281,7 +306,7 @@ legend {
 
 /* ─── AI Forecast Section ────────────────────────────────────────────────── */
 .forecast-section { margin-top: var(--space-4); }
-.forecast-section h2 { font-size: var(--font-lg); color: var(--text-primary); margin-bottom: .25rem; font-weight: 600; }
+.forecast-section h2 { font-size: var(--font-lg); color: var(--accent); margin-bottom: .25rem; font-weight: 700; }
 .forecast-section .hint { font-size: var(--font-sm); color: var(--text-secondary); margin-bottom: var(--space-3); }
 .forecast-header {
   display: flex; justify-content: space-between; align-items: flex-start;
@@ -289,3 +314,83 @@ legend {
 }
 .forecast-section canvas { max-height: 360px; }
 .forecast-section canvas + canvas { margin-top: var(--space-4); }
+
+/* ─── Account (login.html) ───────────────────────────────────────────────────
+   Two side-by-side cards on a wide screen, stacked on a phone. */
+.auth-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--space-3);
+  align-items: start;
+}
+.card h2 { font-size: var(--font-lg); font-weight: 700; color: var(--accent); margin-bottom: var(--space-2); }
+.card + .card, .card + .auth-grid, .auth-grid + .card { margin-top: var(--space-3); }
+.button-row { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.button-row .btn-primary { display: inline-block; text-decoration: none; }
+.account-line { margin-bottom: var(--space-2); }
+.mono { font-family: var(--font-mono); }
+/* Warning variant of the info box: a pale wash with the status ink on top. */
+.info-box.warn-box { background: var(--warn-tint); border-left-color: var(--warn); color: var(--warn); }
+.form-group small.hint { margin-bottom: 0; }
+
+/* ─── Allergy profile (profile.html) ─────────────────────────────────────── */
+.allergen-group { margin-bottom: var(--space-4); }
+.allergen-group:last-of-type { margin-bottom: var(--space-2); }
+.allergen-group h3 {
+  font-size: var(--font-sm); font-weight: 600; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--text-secondary);
+  padding-bottom: var(--space-1); border-bottom: 1px solid var(--border);
+  margin-bottom: var(--space-2);
+}
+.allergen-row {
+  display: flex; justify-content: space-between; align-items: center;
+  gap: var(--space-3); flex-wrap: wrap;
+  padding: var(--space-2) 0;
+}
+.allergen-row + .allergen-row { border-top: 1px solid var(--border); }
+.allergen-meta { display: flex; flex-direction: column; gap: .15rem; }
+.allergen-label { font-weight: 600; font-size: var(--font-sm); }
+.allergen-season { font-size: var(--font-xs); color: var(--text-secondary); font-family: var(--font-mono); }
+
+/* Severity is a segmented control of radio buttons: the native input stays in
+   the DOM (keyboard, screen readers, form semantics) but is visually replaced
+   by the chip that follows it. */
+.severity-group { display: flex; gap: .3rem; flex-wrap: wrap; }
+.severity-option input { position: absolute; opacity: 0; width: 0; height: 0; }
+.severity-option span {
+  display: inline-block; padding: .35rem .75rem;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--bg-elevated); color: var(--text-secondary);
+  font-size: var(--font-xs); cursor: pointer; user-select: none;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.severity-option span:hover { border-color: var(--border-firm); color: var(--text-primary); }
+.severity-option input:checked + span {
+  color: var(--text-primary); border-color: var(--border-firm); font-weight: 700;
+}
+.severity-option input:checked + span[data-level="0"] { background: var(--bg-elevated); color: var(--text-primary); }
+.severity-option input:checked + span[data-level="1"] { background: var(--success-tint); color: var(--success); border-color: var(--success); }
+.severity-option input:checked + span[data-level="2"] { background: var(--warn-tint);    color: var(--warn);    border-color: var(--warn); }
+.severity-option input:checked + span[data-level="3"] { background: var(--danger-tint);  color: var(--danger);  border-color: var(--danger); }
+.severity-option input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* Transfer code: a value to be read and copied, so it is set in the mono face
+   and given room to wrap on a narrow screen. */
+.code-box {
+  font-family: var(--font-mono); font-size: var(--font-sm);
+  background: var(--bg-elevated); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: .6rem .85rem;
+  word-break: break-all; user-select: all; margin-bottom: var(--space-2);
+}
+.inline-form { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: flex-start; }
+.inline-form input { flex: 1 1 22rem; }
+
+.danger-zone { border-color: var(--danger); }
+.btn-danger {
+  background: transparent; color: var(--danger);
+  border: 1px solid var(--danger); border-radius: var(--radius-pill);
+  padding: .6rem 1.4rem; font-size: var(--font-sm); cursor: pointer;
+  transition: background .2s, border-color .2s;
+}
+.btn-danger:hover { background: var(--danger-tint); border-color: var(--danger); }
+.btn-danger:focus-visible { outline: 2px solid var(--danger); outline-offset: 2px; }
