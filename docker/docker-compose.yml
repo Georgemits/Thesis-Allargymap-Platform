@@ -68,6 +68,9 @@ services:
     restart: unless-stopped
     volumes:
       - ../frontend:/usr/share/nginx/html:ro
+      # Proxies /api to the backend so the browser sees one origin locally,
+      # the same shape as the deployed service.
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "8080:80"
     depends_on:

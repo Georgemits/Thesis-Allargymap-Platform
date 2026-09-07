@@ -9,7 +9,13 @@ RUN pip install --no-cache-dir -r requirements.txt -r data_collection_requiremen
 COPY backend/ .
 # data_collection/ must be available so the predictions route can import predictor.py
 COPY data_collection/ data_collection/
+# The frontend ships in the image too: on a single-service host, Flask serves
+# the pages and the API from one origin (see backend/app/routes/site.py).
+# Locally this copy is unused -- nginx serves ../frontend from a bind mount.
+COPY frontend/ frontend/
 
 EXPOSE 5000
 
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "120", "run:app"]
+# Shell form on purpose: managed hosts inject the port to listen on as $PORT,
+# and an exec-form CMD would pass the literal string through unexpanded.
+CMD gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 120 run:app

@@ -1,0 +1,38 @@
+# Render blueprint: one web service running the Docker image, with MongoDB
+# hosted separately on MongoDB Atlas.
+#
+# Why one service: the free tier gives a single web service, and putting the
+# frontend and the API on one origin removes CORS from the deployed system.
+# Flask serves the pages (backend/app/routes/site.py) and the API together.
+#
+# Why Atlas rather than a Mongo container: a free web service has no persistent
+# disk, so a database inside the container would be wiped on every deploy --
+# taking the collected environmental series with it.
+#
+# The two `sync: false` variables are filled in by hand in the Render
+# dashboard and never committed:
+#   MONGO_URI              the Atlas connection string (contains a password)
+#   GOOGLE_POLLEN_API_KEY  Google Maps Platform Pollen API key
+#
+# Atlas also needs this service allowed through its network access list. A free
+# Render service has no fixed outbound IP, so that means 0.0.0.0/0 -- which is
+# acceptable only because the connection string itself is the credential. Keep
+# it out of the repository, and rotate it if it ever leaks.
+services:
+  - type: web
+    name: allergymap
+    runtime: docker
+    dockerfilePath: ./docker/Dockerfile.backend
+    dockerContext: .
+    plan: free
+    region: frankfurt
+    healthCheckPath: /health
+    envVars:
+      - key: FLASK_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: MONGO_URI
+        sync: false
+      - key: GOOGLE_POLLEN_API_KEY
+        sync: false

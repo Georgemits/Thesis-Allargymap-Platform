@@ -12,7 +12,7 @@ an nginx-served frontend.
 | `backend`    | `Dockerfile.backend`         | 5000         | Flask API (gunicorn). |
 | `seeder`     | `Dockerfile.seeder`          | —            | One-shot: `open_meteo_fetcher.py --mode past --days 30 --push-to-mongo` (`restart: "no"`). |
 | `collector`  | `Dockerfile.collector`       | —            | Long-running: `scheduler.py` on the schedule in `data_collection/collector_config.json` (`restart: unless-stopped`). Writes to the `collector_output` volume. |
-| `frontend`    | `nginx:alpine`               | 8080         | Serves `../frontend` as static files. |
+| `frontend`    | `nginx:alpine`               | 8080         | Serves `../frontend` as static files **and proxies `/api` to the backend** (`nginx.conf`), so the browser sees a single origin — the same shape as the deployed service. |
 
 ### Indexes on an existing volume
 
@@ -29,6 +29,15 @@ docker compose exec mongo mongosh allergymap --quiet --eval \
 
 A fresh clone needs none of this.
 
+
+### One origin, locally too
+
+`nginx.conf` proxies `/api/` and `/health` to `backend:5000`. The frontend
+therefore calls relative URLs and never makes a cross-origin request, which is
+exactly what happens in the deployed single-service setup (see the deployment
+section of the root README). If you previously had a `frontend/env.local.js`
+pointing at a remapped backend port, you can delete it — it is no longer needed,
+though it still works as an override.
 
 ## Environment
 

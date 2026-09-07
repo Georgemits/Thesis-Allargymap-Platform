@@ -11,7 +11,12 @@
  * simple one. Load identity.js before this file.
  */
 const API = (() => {
-  const BASE = window.ALLERGYMAP_API_BASE || "http://localhost:5000";
+  // Same origin by default: nginx proxies /api to the backend locally, and
+  // the deployed service answers both from one host, so a relative URL is
+  // correct in both. `window.ALLERGYMAP_API_BASE` (set by an optional,
+  // gitignored env.local.js) overrides it for anyone running the frontend
+  // from a different port than the API.
+  const BASE = window.ALLERGYMAP_API_BASE || "";
 
   async function request(path, options = {}) {
     const { identified = false, headers: extraHeaders, ...rest } = options;

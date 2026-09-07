@@ -27,6 +27,7 @@ def create_app(config_name: str = None) -> Flask:
     from .routes.profiles import bp as profiles_bp
     from .routes.auth import bp as auth_bp
     from .routes.correlations import bp as correlations_bp
+    from .routes.site import bp as site_bp, frontend_dir
 
     app.register_blueprint(health_bp)
     app.register_blueprint(reports_bp, url_prefix="/api/reports")
@@ -36,5 +37,13 @@ def create_app(config_name: str = None) -> Flask:
     app.register_blueprint(profiles_bp, url_prefix="/api/profiles")
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(correlations_bp, url_prefix="/api/correlations")
+
+    # Single-service deployment: when the frontend ships alongside the API,
+    # serve it from the same origin. Registered last so it can claim "/" and
+    # the catch-all path without shadowing any /api route.
+    directory = frontend_dir()
+    if directory is not None:
+        app.config["FRONTEND_DIR"] = str(directory)
+        app.register_blueprint(site_bp)
 
     return app
